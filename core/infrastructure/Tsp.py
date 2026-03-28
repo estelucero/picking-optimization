@@ -19,7 +19,7 @@ class TSP:
         self._grafo = grafo
         self._deposito = deposito
 
-    def calcular(self, batch: list[Pedido]) -> float:
+    def calcular(self, batch: set[Pedido]) -> float:
         """
         Calcula la distancia total del recorrido para un batch de pedidos,
         saliendo y volviendo al depósito.
@@ -28,13 +28,13 @@ class TSP:
         elimina duplicados y aplica vecino más cercano.
 
         Parámetros:
-        - batch: lista de Pedido a visitar en este viaje
+        - batch: conjunto de Pedido a visitar en este viaje
 
         Retorna:
         - distancia total del recorrido
         """
-        if not isinstance(batch, list):
-            raise ValueError("El batch debe ser una lista de Pedido")
+        if not isinstance(batch, set):
+            raise ValueError("El batch debe ser un conjunto (set) de Pedido")
 
         # Reunir todos los nodos a visitar eliminando duplicados
         nodos_a_visitar = set()
