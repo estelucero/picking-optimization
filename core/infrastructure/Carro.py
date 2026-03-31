@@ -1,4 +1,4 @@
-from pedido import Pedido
+from .Pedido import Pedido
 
 
 class Carro:

@@ -1,5 +1,6 @@
-from producto import Producto
-from grafo import Grafo
+from .Producto import Producto
+from ..interfaces.Grafo import Grafo
+from ..utils.UnidadDistancia import UnidadDistancia
 
 
 class Ubicaciones(Grafo):
@@ -8,7 +9,7 @@ class Ubicaciones(Grafo):
     la matriz de distancias Manhattan a partir de una lista de productos.
 
     Cada producto es un nodo. Las distancias entre nodos se calculan
-    con la fórmula Manhattan: |x1 - x2| + |y1 - y2|.
+    con la fórmula Manhattan: |x1 - x2| + |y1 - y2| (en metros).
 
     Ejemplo:
         productos = [
@@ -21,7 +22,7 @@ class Ubicaciones(Grafo):
     def __init__(self, productos: list[Producto]):
         self._validar(productos)
         self._productos: dict[str, Producto] = {p.codigo: p for p in productos}
-        self._distancias: dict[str, dict[str, float]] = self._construir_grafo(productos)
+        self._distancias: dict[str, dict[str, UnidadDistancia]] = self._construir_grafo(productos)
 
     def _validar(self, productos: list[Producto]) -> None:
         if not isinstance(productos, list) or len(productos) == 0:
@@ -33,19 +34,20 @@ class Ubicaciones(Grafo):
         if len(codigos) != len(set(codigos)):
             raise ValueError("Existen productos con código duplicado en la lista")
 
-    def _construir_grafo(self, productos: list[Producto]) -> dict[str, dict[str, float]]:
+    def _construir_grafo(self, productos: list[Producto]) -> dict[str, dict[str, UnidadDistancia]]:
         distancias = {}
         for origen in productos:
             distancias[origen.codigo] = {}
             for destino in productos:
                 if origen.codigo != destino.codigo:
-                    distancias[origen.codigo][destino.codigo] = self._manhattan(origen, destino)
+                    metros = self._manhattan(origen, destino)
+                    distancias[origen.codigo][destino.codigo] = UnidadDistancia(metros)
         return distancias
 
     def _manhattan(self, origen: Producto, destino: Producto) -> float:
         return abs(origen.x - destino.x) + abs(origen.y - destino.y)
 
-    def distancia(self, origen: str, destino: str) -> float:
+    def distancia(self, origen: str, destino: str) -> UnidadDistancia:
         if origen not in self._distancias:
             raise ValueError(f"El nodo origen '{origen}' no existe en el grafo")
         if destino not in self._distancias[origen]:

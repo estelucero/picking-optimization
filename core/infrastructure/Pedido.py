@@ -1,4 +1,4 @@
-from producto import Producto
+from .Producto import Producto
 
 
 class Pedido:
