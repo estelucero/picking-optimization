@@ -1,5 +1,6 @@
-from grafo import Grafo
-from pedido import Pedido
+from ..interfaces.Grafo import Grafo
+from ..infrastructure.Pedido import Pedido
+from ..utils.UnidadDistancia import UnidadDistancia
 
 
 class TSP:
@@ -19,7 +20,7 @@ class TSP:
         self._grafo = grafo
         self._deposito = deposito
 
-    def calcular(self, batch: list[Pedido]) -> float:
+    def calcular(self, batch: set[Pedido]) -> UnidadDistancia:
         """
         Calcula la distancia total del recorrido para un batch de pedidos,
         saliendo y volviendo al depósito.
@@ -28,15 +29,14 @@ class TSP:
         elimina duplicados y aplica vecino más cercano.
 
         Parámetros:
-        - batch: lista de Pedido a visitar en este viaje
+        - batch: conjunto de Pedido a visitar en este viaje
 
         Retorna:
-        - distancia total del recorrido
+        - UnidadDistancia con la distancia total del recorrido (en metros)
         """
-        if not isinstance(batch, list):
-            raise ValueError("El batch debe ser una lista de Pedido")
+        if not isinstance(batch, set):
+            raise ValueError("El batch debe ser un conjunto (set) de Pedido")
 
-        # Reunir todos los nodos a visitar eliminando duplicados
         nodos_a_visitar = set()
         for pedido in batch:
             if not isinstance(pedido, Pedido):
@@ -45,23 +45,22 @@ class TSP:
                 nodos_a_visitar.add(producto.codigo)
 
         if not nodos_a_visitar:
-            return 0.0
+            return UnidadDistancia(0.0)
 
         nodos_invalidos = nodos_a_visitar - self._grafo.nodos()
         if nodos_invalidos:
             raise ValueError(f"Los siguientes nodos no existen en el grafo: {nodos_invalidos}")
 
-        # Vecino más cercano
         pendientes = set(nodos_a_visitar)
         posicion_actual = self._deposito
         distancia_total = 0.0
 
         while pendientes:
-            siguiente = min(pendientes, key=lambda n: self._grafo.distancia(posicion_actual, n))
-            distancia_total += self._grafo.distancia(posicion_actual, siguiente)
+            siguiente = min(pendientes, key=lambda n: self._grafo.distancia(posicion_actual, n).metros)
+            distancia_total += self._grafo.distancia(posicion_actual, siguiente).metros
             posicion_actual = siguiente
             pendientes.remove(siguiente)
 
-        distancia_total += self._grafo.distancia(posicion_actual, self._deposito)
+        distancia_total += self._grafo.distancia(posicion_actual, self._deposito).metros
 
-        return distancia_total
+        return UnidadDistancia(distancia_total)
