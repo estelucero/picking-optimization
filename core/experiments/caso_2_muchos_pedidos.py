@@ -1,12 +1,12 @@
 from core.infrastructure.Ubicaciones import Ubicaciones
 from core.algoritmos.Tsp import TSP
 from core.algoritmos.Modelo import Modelo
-from .generadores import crear_productos_grid, crear_pedidos_desde_productos, crear_operarios
+from generadores import crear_productos_grid, crear_pedidos_desde_productos, crear_operarios
 
 
 def experimento():
     productos = crear_productos_grid(30, "Item")
-    pedidos = crear_pedidos_desde_productos(productos, cantidad_pedidos=20, items_por_pedido=(1, 4))
+    pedidos = crear_pedidos_desde_productos(productos, cantidad_pedidos=20, items_por_pedido=(1, 3))
     operarios = crear_operarios(cantidad=3, velocidad_metros_por_segundo=1.0, capacidad_carro=30.0)
 
     grafo = Ubicaciones(productos)
