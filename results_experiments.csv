@@ -1,0 +1,6 @@
+caso,tiempo_minimo_min,tiempo_ejecucion_ms,cantidad_pedidos,cantidad_operarios,cantidad_batches_total
+basico,5.4,0.47206878662109375,4,2,2
+muchos_pedidos,37.833333333333336,3.6859512329101562,20,3,13
+productos_pesados,7.6,0.3247261047363281,6,2,4
+operarios_diferentes,26.6,2.025127410888672,15,4,10
+distribucion_alejada,63.36666666666667,0.4990100860595703,7,2,2
