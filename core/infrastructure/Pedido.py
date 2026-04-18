@@ -39,6 +39,8 @@ class Pedido:
     @property
     def codigo(self) -> str:
         return self._codigo
+    def setCodigo(self, valor: str) -> None:
+        self._codigo = valor
 
     @property
     def cliente(self) -> str:
