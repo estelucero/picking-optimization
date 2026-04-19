@@ -30,12 +30,11 @@ class Modelo(Heuristica):
     ) -> Resultado:
         self._validar_parametros(pedidos, operarios, beta_picking)
 
-        pedidos_unitarios: list[list[Pedido]] = []
+        pedidos_unitarios: list[Pedido] = []
         nro_pedido: int = 1
         for pedido in pedidos:
             pedido.setCodigo(pedido.codigo + "_" +str(nro_pedido))
-            pedido_unitario: list[Pedido] = [pedido]
-            pedidos_unitarios.append(pedido_unitario)
+            pedidos_unitarios.append(pedido)
 
 
         # Inicializar estado de cada operario
@@ -45,17 +44,16 @@ class Modelo(Heuristica):
         }
         secuencia: list[Pedido] = []
 
-        for pedido_unitario in pedidos_unitarios:
 
-            for pedido in pedido_unitario:
-                secuencia.append(pedido)
-                mejor_operario, mejor_tiempo = self._elegir_operario(
-                    pedido, operarios, tiempos, carros, beta_picking
-                )
+        for pedido in pedidos_unitarios:
+            secuencia.append(pedido)
+            mejor_operario, mejor_tiempo = self._elegir_operario(
+                pedido, operarios, tiempos, carros, beta_picking
+            )
 
-                # Asignar pedido al operario elegido
-                tiempos[mejor_operario] = mejor_tiempo
-                carros[mejor_operario].agregar_pedido(pedido)
+            # Asignar pedido al operario elegido
+            tiempos[mejor_operario] = mejor_tiempo
+            carros[mejor_operario].agregar_pedido(pedido)
 
         tiempo_minimo = sum(tiempos.values())
         asignacion = {op: carros[op].batches for op in operarios}
