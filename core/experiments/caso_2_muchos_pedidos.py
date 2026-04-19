@@ -17,6 +17,22 @@ def experimento():
 
     batches_total = sum(len(batches) for batches in resultado.asignacion.values())
 
+    print(f"Secuencia: {[p.codigo for p in resultado.secuencia]}")
+
+    for op, batches in resultado.asignacion.items():
+        print(f"\n Operario: {op.codigo}:")
+        for i, batch in enumerate(batches):
+            print(f"  Batch {i + 1}: ", end="")
+            print("[", end="")
+            pesoBatch = 0
+            for pedido in batch:
+                # pesoPedido = 0
+                for item in pedido.items:
+                    pesoBatch =+ item.peso
+                print({pedido.codigo}, end="")
+            print("]", end="")
+            print(f", Peso batch: {pesoBatch} ")
+
     return {
         "caso": "muchos_pedidos",
         "tiempo_minimo_min": resultado.tiempo_minimo,
@@ -34,3 +50,4 @@ if __name__ == "__main__":
     print(f"Pedidos: {resultado['cantidad_pedidos']}")
     print(f"Operarios: {resultado['cantidad_operarios']}")
     print(f"Batches totales: {resultado['cantidad_batches_total']}")
+
