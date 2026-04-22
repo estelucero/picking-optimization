@@ -25,7 +25,7 @@ def ejecutar_experimentos():
 
 
 def guardar_csv(resultados: list[dict], ruta: str = "results_experiments.csv"):
-    columnas = ["caso", "tiempo_minimo_min", "tiempo_ejecucion_ms", "cantidad_pedidos", "cantidad_operarios", "cantidad_batches_total"]
+    columnas = ["caso", "tiempo_minimo_min", "tiempo_ejecucion_ms", "cantidad_pedidos", "cantidad_operarios", "cantidad_viajes_total"]
 
     with open(ruta, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=columnas, extrasaction="ignore")
@@ -48,7 +48,7 @@ def main():
     print("=" * 60)
     for r in resultados:
         print(f"{r['caso']:25s} | {r['tiempo_minimo_min']:8.2f} min | {r['tiempo_ejecucion_ms']:8.2f} ms | "
-              f"pedidos={r['cantidad_pedidos']:3d} | operarios={r['cantidad_operarios']} | batches={r['cantidad_batches_total']}")
+              f"pedidos={r['cantidad_pedidos']:3d} | operarios={r['cantidad_operarios']} | viajes={r['cantidad_viajes_total']}")
 
     print()
     guardar_csv(resultados)

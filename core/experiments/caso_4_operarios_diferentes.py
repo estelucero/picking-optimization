@@ -15,14 +15,14 @@ def experimento():
 
     resultado = modelo.resolver(pedidos, operarios, beta_picking=0.5)
 
-    batches_total = sum(len(batches) for batches in resultado.asignacion.values())
+    viajes_total = sum(len(viajes) for viajes in resultado.asignacion.values())
 
     return {
         "caso": "operarios_diferentes",
         "tiempo_minimo_min": resultado.tiempo_minimo,
         "cantidad_pedidos": len(pedidos),
         "cantidad_operarios": len(operarios),
-        "cantidad_batches_total": batches_total,
+        "cantidad_viajes_total": viajes_total,
         "secuencia": [p.codigo for p in resultado.secuencia],
     }
 

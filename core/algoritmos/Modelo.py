@@ -1,20 +1,18 @@
-from ..infrastructure.Carro import Carro
+from ..infrastructure.Producto import Producto
 from ..interfaces.Heuristica import Heuristica
 from ..infrastructure.Operario import Operario
 from ..infrastructure.Pedido import Pedido
 from ..infrastructure.Resultado import Resultado
+from ..infrastructure.Viaje import Viaje
 from core.algoritmos.Tsp import TSP
 
 
 class Modelo(Heuristica):
     """
-    Heurística de asignación de pedidos sin criterio de urgencia.
+    Heurística de asignación de pedidos considerando viajes.
 
-    Asigna cada pedido al operario que queda con menor tiempo acumulado
-    luego de recibirlo. Si el pedido no entra en el batch actual del
-    operario elegido, se abre un nuevo batch.
-
-    Se construye con un TSP que calcula las distancias de recorrido.
+    Desempaqueta cada pedido en productos y los asigna a los operarios.
+    Cuando el carro de un operario se llena, se inicia un nuevo viaje.
     """
 
     def __init__(self, tsp: TSP):
@@ -30,43 +28,53 @@ class Modelo(Heuristica):
     ) -> Resultado:
         self._validar_parametros(pedidos, operarios, beta_picking)
 
-        # Inicializar estado de cada operario
-        tiempos: dict[Operario, float] = {op: 0.0 for op in operarios}
-        carros: dict[Operario, Carro] = {
-            op: Carro(op.carro.capacidad_max_peso) for op in operarios
-        }
-        secuencia: list[Pedido] = []
+        productos = self._desempaquetar_pedidos(pedidos)
 
-        for pedido in pedidos:
-            secuencia.append(pedido)
+        tiempos: dict[Operario, float] = {op: op.tiempo_acumulado for op in operarios}
+
+        secuencia: list[Producto] = []
+
+        for producto, cantidad in productos:
+            secuencia.append(producto)
             mejor_operario, mejor_tiempo = self._elegir_operario(
-                pedido, operarios, tiempos, carros, beta_picking
+                producto, cantidad, operarios, tiempos, beta_picking
             )
 
-            # Asignar pedido al operario elegido
             tiempos[mejor_operario] = mejor_tiempo
-            carros[mejor_operario].agregar_pedido(pedido)
+            self._agregar_producto(mejor_operario, producto, cantidad, beta_picking)
+
+        for op in operarios:
+            if op.carro.peso_batch_actual() > 0:
+                self._cerrar_viaje(op)
 
         tiempo_minimo = sum(tiempos.values())
-        asignacion = {op: carros[op].batches for op in operarios}
+        asignacion = {op: op.viajes for op in operarios}
 
         return Resultado(tiempo_minimo=tiempo_minimo, asignacion=asignacion, secuencia=secuencia)
 
+    def _desempaquetar_pedidos(self, pedidos: list[Pedido]) -> list[tuple[Producto, int]]:
+        """Desempaqueta todos los pedidos en una lista de (producto, cantidad)."""
+        productos = []
+        for pedido in pedidos:
+            for producto, cantidad in pedido.items.items():
+                productos.append((producto, cantidad))
+        return productos
+
     def _elegir_operario(
         self,
-        pedido: Pedido,
+        producto: Producto,
+        cantidad: int,
         operarios: list[Operario],
         tiempos: dict[Operario, float],
-        carros: dict[Operario, Carro],
         beta_picking: float,
     ) -> tuple[Operario, float]:
-        """Retorna el operario y el tiempo estimado mínimo al asignarle el pedido."""
+        """Retorna el operario y el tiempo estimado mínimo."""
         mejor_operario = None
         mejor_tiempo = float("inf")
 
         for op in operarios:
             tiempo_estimado = self._calcular_tiempo_estimado(
-                pedido, op, tiempos[op], carros[op], beta_picking
+                producto, cantidad, op, tiempos[op], beta_picking
             )
             if tiempo_estimado < mejor_tiempo:
                 mejor_tiempo = tiempo_estimado
@@ -76,26 +84,58 @@ class Modelo(Heuristica):
 
     def _calcular_tiempo_estimado(
         self,
-        pedido: Pedido,
+        producto: Producto,
+        cantidad: int,
         operario: Operario,
         tiempo_acumulado: float,
-        carro: Carro,
         beta_picking: float,
     ) -> float:
-        """
-        Calcula el tiempo que tendría el operario si se le asigna el pedido.
-        Usa el batch actual si el pedido entra, o un batch nuevo si no entra.
-        """
-        if carro.puede_agregar(pedido):
-            batch_temporal = carro.batch_actual() | {pedido}
-        else:
-            batch_temporal = {pedido}
+        """Calcula el tiempo estimado si se agrega el producto."""
+        carro = operario.carro
+        peso_necesario = producto.peso * cantidad
+        capacidad_restante = carro.capacidad_restante()
 
-        distancia = self._tsp.calcular(batch_temporal)
-        total_items = sum(p.total_items() for p in batch_temporal)
+        tiempo = tiempo_acumulado
+
+        if peso_necesario <= capacidad_restante:
+            batch_temporal = dict(carro.batch)
+            batch_temporal[producto] = batch_temporal.get(producto, 0) + cantidad
+        else:
+            batch_temporal = {producto: cantidad}
+            if carro.batch:
+                distancia_retorno = self._tsp.calcular_desde_productos(carro.batch)
+                tiempo += distancia_retorno.metros / operario.velocidad.metros_por_minuto
+
+        distancia = self._tsp.calcular_desde_productos(batch_temporal)
+        total_items = sum(batch_temporal.values())
         t_batch = distancia.metros / operario.velocidad.metros_por_minuto + beta_picking * total_items
 
-        return tiempo_acumulado + t_batch
+        return tiempo + t_batch
+
+    def _agregar_producto(
+        self,
+        operario: Operario,
+        producto: Producto,
+        cantidad: int,
+        beta_picking: float,
+    ) -> None:
+        """Agrega un producto al carro del operario, cerrando viaje si está lleno."""
+        carro_lleno = operario.agregar_producto(producto, cantidad)
+
+        if carro_lleno:
+            self._cerrar_viaje(operario)
+
+    def _cerrar_viaje(self, operario: Operario) -> None:
+        """Cierra el viaje actual del operario (incluye retorno al depósito)."""
+        carro = operario.carro
+        if carro.peso_batch_actual() == 0:
+            return
+
+        distancia = self._tsp.calcular_desde_productos(carro.batch)
+        tiempo_viaje = distancia.metros / operario.velocidad.metros_por_minuto
+
+        viaje = Viaje(carro.batch, distancia.metros, tiempo_viaje)
+        operario.agregar_viaje(viaje)
 
     def _validar_parametros(
         self,

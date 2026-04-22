@@ -35,7 +35,7 @@ class Producto:
  
     def _validar_coordenada(self, valor: float, eje: str) -> None:
         if not isinstance(valor, (int, float)):
-            raise ValueError(f"La coordenada '{eje}' debe ser numérica, se recibió: '{valor}'")
+            raise ValueError(f"La coordenada '{eje}' debe ser numérica, se recibió: '{valor}'") 
  
     @property
     def codigo(self) -> str:

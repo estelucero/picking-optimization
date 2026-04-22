@@ -1,4 +1,6 @@
 from .Carro import Carro
+from .Producto import Producto
+from .Viaje import Viaje
 from ..utils.Velocidad import Velocidad
 
 
@@ -11,9 +13,16 @@ class Operario:
     - nombre: nombre del operario
     - velocidad: objeto Velocidad (en metros por segundo)
     - carro: carro de picking asignado al operario
+    - viajes: lista de viajes completados
     """
 
-    def __init__(self, codigo: str, nombre: str, velocidad: Velocidad, carro: Carro):
+    def __init__(
+        self,
+        codigo: str,
+        nombre: str,
+        velocidad: Velocidad,
+        carro: Carro,
+    ):
         self._validar_string(codigo, "código")
         self._validar_string(nombre, "nombre")
         if not isinstance(velocidad, Velocidad):
@@ -26,6 +35,7 @@ class Operario:
         self._velocidad = velocidad
         self._carro = carro
         self._tiempo_acumulado: float = 0.0
+        self._viajes: list[Viaje] = []
 
     def _validar_string(self, valor: str, campo: str) -> None:
         if not isinstance(valor, str) or not valor.strip():
@@ -51,10 +61,39 @@ class Operario:
     def tiempo_acumulado(self) -> float:
         return self._tiempo_acumulado
 
+    @property
+    def viajes(self) -> list[Viaje]:
+        return list(self._viajes)
+
     def agregar_tiempo(self, tiempo: float) -> None:
         if not isinstance(tiempo, (int, float)) or tiempo < 0:
             raise ValueError(f"El tiempo debe ser un número no negativo, se recibió: {tiempo}")
         self._tiempo_acumulado += tiempo
+
+    def agregar_producto(self, producto: Producto, cantidad: int) -> bool:
+        """
+        Agrega un producto al carro.
+        Retorna True si el carro estaba lleno y se debe cerrar el viaje.
+        """
+        if not isinstance(producto, Producto):
+            raise ValueError(f"Se esperaba un Producto, se recibió: {type(producto)}")
+        if not isinstance(cantidad, int) or cantidad <= 0:
+            raise ValueError(f"La cantidad debe ser un entero mayor a 0, se recibió: {cantidad}")
+
+        peso_necesario = producto.peso * cantidad
+
+        if peso_necesario > self._carro.capacidad_restante() and self._carro.peso_batch_actual() > 0:
+            return True  # Indica que debe cerrarse el viaje
+
+        self._carro.agregar_producto(producto, cantidad)
+        return False
+
+    def agregar_viaje(self, viaje: Viaje) -> None:
+        """Guarda un viaje completado en la lista de viajes."""
+        if not isinstance(viaje, Viaje):
+            raise ValueError(f"Se esperaba un Viaje, se recibió: {type(viaje)}")
+        self._viajes.append(viaje)
+        self._tiempo_acumulado += viaje.tiempo
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Operario):
