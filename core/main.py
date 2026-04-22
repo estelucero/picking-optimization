@@ -44,10 +44,10 @@ def main():
     print(f"Tiempo minimo total: {resultado.tiempo_minimo:.2f} minutos")
     print(f"Secuencia: {[p.codigo for p in resultado.secuencia]}")
 
-    for op, batches in resultado.asignacion.items():
+    for op, viajes in resultado.asignacion.items():
         print(f"\n{op.codigo}:")
-        for i, batch in enumerate(batches):
-            print(f"  Batch {i+1}: {[p.codigo for p in batch]}")
+        for i, viaje in enumerate(viajes):
+            print(f"  Viaje {i+1}: productos={[p.codigo for p in viaje.productos]}, distancia={viaje.distancia}m, tiempo={viaje.tiempo:.2f}min")
 
 
 if __name__ == "__main__":

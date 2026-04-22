@@ -1,5 +1,6 @@
 from ..interfaces.Grafo import Grafo
 from ..infrastructure.Pedido import Pedido
+from ..infrastructure.Producto import Producto
 from ..utils.UnidadDistancia import UnidadDistancia
 
 
@@ -24,15 +25,6 @@ class TSP:
         """
         Calcula la distancia total del recorrido para un batch de pedidos,
         saliendo y volviendo al depósito.
-
-        Junta todas las ubicaciones de todos los pedidos del batch,
-        elimina duplicados y aplica vecino más cercano.
-
-        Parámetros:
-        - batch: conjunto de Pedido a visitar en este viaje
-
-        Retorna:
-        - UnidadDistancia con la distancia total del recorrido (en metros)
         """
         if not isinstance(batch, set):
             raise ValueError("El batch debe ser un conjunto (set) de Pedido")
@@ -44,14 +36,34 @@ class TSP:
             for producto in pedido.productos():
                 nodos_a_visitar.add(producto.codigo)
 
-        if not nodos_a_visitar:
+        return self._calcular_desde_nodos(nodos_a_visitar)
+
+    def calcular_desde_productos(self, productos: dict[Producto, int]) -> UnidadDistancia:
+        """
+        Calcula la distancia desde un dict de productos.
+        """
+        nodos_a_visitar = {p.codigo for p in productos.keys()}
+        return self._calcular_desde_nodos(nodos_a_visitar)
+
+    def distancia_hasta_deposito(self, productos: set[Producto]) -> UnidadDistancia:
+        """
+        Calcula la distancia desde el último producto hasta el depósito.
+        """
+        if not productos:
+            return UnidadDistancia(0.0)
+        ultimo = max(productos, key=lambda p: 0)
+        return self._grafo.distancia(ultimo.codigo, self._deposito)
+
+    def _calcular_desde_nodos(self, nodos: set[str]) -> UnidadDistancia:
+        """Calcula la distancia desde un set de códigos de nodos."""
+        if not nodos:
             return UnidadDistancia(0.0)
 
-        nodos_invalidos = nodos_a_visitar - self._grafo.nodos()
+        nodos_invalidos = nodos - self._grafo.nodos()
         if nodos_invalidos:
             raise ValueError(f"Los siguientes nodos no existen en el grafo: {nodos_invalidos}")
 
-        pendientes = set(nodos_a_visitar)
+        pendientes = set(nodos)
         posicion_actual = self._deposito
         distancia_total = 0.0
 
