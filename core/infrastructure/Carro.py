@@ -16,8 +16,12 @@ class Carro:
     batch:dict[Producto, int]
     capacidad_usada:int
 
-    def __init__(self):
-        self._capacidad_max_peso = 0
+    def __init__(self, capacidad_max_peso: float = 20.0):
+        if not isinstance(capacidad_max_peso, (int, float)):
+            raise ValueError("La capacidad debe ser numérica")
+        if capacidad_max_peso <= 0:
+            raise ValueError("La capacidad debe ser mayor a 0")
+        self._capacidad_max_peso = capacidad_max_peso
         self.capacidad_usada = 0
         self._batch: dict[Producto,int] = {}
 
@@ -27,7 +31,7 @@ class Carro:
 
     @property
     def batch(self) -> dict[Producto,int]:
-        return [set(batch) for batch in self._batch]
+        return self._batch.copy()
 
     def peso_batch_actual(self) -> float:
         """Retorna el peso total acumulado en el batch actual."""
@@ -40,7 +44,7 @@ class Carro:
     def puede_agregar(self, producto: Producto, cantidad: int) -> bool:
         """Indica si el producto con esa cantidad se puede agregar."""
         if not isinstance(producto, Producto):
-            raise ValueError(f"Se esperaba un Pedido, se recibió: {type(pedido)}")
+            raise ValueError(f"Se esperaba un Producto, se recibió: {type(producto)}")
         peso_nuevo = (producto.peso * cantidad) + self.capacidad_usada
         return peso_nuevo <= self.capacidad_max_peso 
 
@@ -65,6 +69,21 @@ class Carro:
         
         self.capacidad_usada += producto.peso * cantidad
         
+
+    def vaciar(self) -> dict[Producto, int]:
+        """Vacía el carro y retorna los productos que tenía."""
+        batch_anterior = self._batch.copy()
+        self._batch.clear()
+        self.capacidad_usada = 0
+        return batch_anterior
+
+    def batch_actual(self) -> dict[Producto, int]:
+        """Alias para batch (para compatibilidad)."""
+        return self._batch.copy()
+
+    def total_batches(self) -> int:
+        """Cantidad de productos únicos en batch."""
+        return len(self._batch)
 
     def __repr__(self) -> str:
         return (
