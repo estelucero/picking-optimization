@@ -103,10 +103,10 @@ class Modelo(Heuristica):
         else:
             batch_temporal = {producto: cantidad}
             if carro.batch:
-                distancia_retorno = self._tsp.calcular_desde_productos(carro.batch)
+                distancia_retorno, secuencia = self._tsp.calcular_desde_productos(carro.batch)
                 tiempo += distancia_retorno.metros / operario.velocidad.metros_por_minuto
 
-        distancia = self._tsp.calcular_desde_productos(batch_temporal)
+        distancia, secuencia = self._tsp.calcular_desde_productos(batch_temporal)
         total_items = sum(batch_temporal.values())
         t_batch = distancia.metros / operario.velocidad.metros_por_minuto + beta_picking * total_items
 
@@ -131,11 +131,13 @@ class Modelo(Heuristica):
         if carro.peso_batch_actual() == 0:
             return
 
-        distancia = self._tsp.calcular_desde_productos(carro.batch)
+        distancia, secuencia = self._tsp.calcular_desde_productos(carro.batch)
         tiempo_viaje = distancia.metros / operario.velocidad.metros_por_minuto
 
-        viaje = Viaje(carro.batch, distancia.metros, tiempo_viaje)
+        viaje = Viaje(carro.batch, distancia.metros, tiempo_viaje, secuencia, carro.capacidad_usada)
         operario.agregar_viaje(viaje)
+        #vaciar carrito
+        carro.vaciar()
 
     def _validar_parametros(
         self,

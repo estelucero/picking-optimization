@@ -1,7 +1,7 @@
 from core.infrastructure.Ubicaciones import Ubicaciones
 from core.algoritmos.Tsp import TSP
 from core.algoritmos.Modelo import Modelo
-from .generadores import crear_productos_grid, crear_pedidos_desde_productos, crear_operarios
+from generadores import crear_productos_grid, crear_pedidos_desde_productos, crear_operarios
 
 
 def experimento():
@@ -24,6 +24,7 @@ def experimento():
         "cantidad_operarios": len(operarios),
         "cantidad_viajes_total": viajes_total,
         "secuencia": [p.codigo for p in resultado.secuencia],
+        "operarios": resultado.asignacion
     }
 
 
@@ -33,4 +34,12 @@ if __name__ == "__main__":
     print(f"Tiempo mínimo: {resultado['tiempo_minimo_min']:.2f} min")
     print(f"Pedidos: {resultado['cantidad_pedidos']}")
     print(f"Operarios: {resultado['cantidad_operarios']}")
-    print(f"Batches totales: {resultado['cantidad_batches_total']}")
+    print(f"secuancia: {resultado['secuencia']}")
+    # print(f"Operaciones: {resultado['operarios']}")
+    for op in resultado['operarios']:
+        print(op)
+        for viaje in op.viajes:
+            print(viaje)
+            secuencia = viaje.secuencia()
+            for producto in secuencia:
+                print(producto)
