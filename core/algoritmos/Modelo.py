@@ -124,6 +124,8 @@ class Modelo(Heuristica):
 
         if carro_lleno:
             self._cerrar_viaje(operario)
+            #se vacia el carro lleno y se agrega el producto a un nuevo carro
+            operario.agregar_producto(producto, cantidad)
 
     def _cerrar_viaje(self, operario: Operario) -> None:
         """Cierra el viaje actual del operario (incluye retorno al depósito)."""
