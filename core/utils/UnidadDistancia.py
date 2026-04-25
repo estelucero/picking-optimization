@@ -1,15 +1,8 @@
-from dataclasses import dataclass
+from pydantic import BaseModel, Field
 
-
-@dataclass(frozen=True)
-class UnidadDistancia:
-    metros: float
-
-    def __post_init__(self):
-        if not isinstance(self.metros, (int, float)):
-            raise ValueError(f"El valor debe ser numérico, se recibió: {type(self.metros)}")
-        if self.metros < 0:
-            raise ValueError(f"La distancia no puede ser negativa, se recibió: {self.metros}")
+class UnidadDistancia(BaseModel):
+    metros: float = Field(...,ge=0)
+    model_config = {"frozen": True}
 
     @property
     def valor(self) -> float:

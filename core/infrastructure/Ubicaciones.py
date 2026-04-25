@@ -1,9 +1,11 @@
+from pydantic import BaseModel, Field, model_validator, PrivateAttr
+from typing import Self
 from .Producto import Producto
 from ..interfaces.Grafo import Grafo
 from ..utils.UnidadDistancia import UnidadDistancia
 
 
-class Ubicaciones(Grafo):
+class Ubicaciones(BaseModel, Grafo):
     """
     Implementación concreta de Grafo que construye automáticamente
     la matriz de distancias Manhattan a partir de una lista de productos.
@@ -18,31 +20,36 @@ class Ubicaciones(Grafo):
         ]
         grafo = Ubicaciones(productos)
     """
+    # Pydantic valida automáticamente que sea una lista de Producto
+    productos: list[Producto] = Field(
+        ..., 
+        min_length=1, 
+        description="Lista no vacía de productos para construir el grafo"
+    )
 
-    def __init__(self, productos: list[Producto]):
-        self._validar(productos)
-        self._productos: dict[str, Producto] = {p.codigo: p for p in productos}
-        self._distancias: dict[str, dict[str, UnidadDistancia]] = self._construir_grafo(productos)
+    # Atributos internos que no se serializan ni exponen en el schema
+    _productos: dict[str, Producto] = PrivateAttr(default_factory=dict)
+    _distancias: dict[str, dict[str, UnidadDistancia]] = PrivateAttr(default_factory=dict)
 
-    def _validar(self, productos: list[Producto]) -> None:
-        if not isinstance(productos, list) or len(productos) == 0:
-            raise ValueError("Se debe proveer una lista no vacía de productos")
-        for p in productos:
-            if not isinstance(p, Producto):
-                raise ValueError(f"Todos los elementos deben ser Producto, se recibió: {type(p)}")
-        codigos = [p.codigo for p in productos]
+    @model_validator(mode='after')
+    def _validar_y_construir(self) -> Self:
+        # 1. Validar códigos únicos
+        codigos = [p.codigo for p in self.productos]
         if len(codigos) != len(set(codigos)):
             raise ValueError("Existen productos con código duplicado en la lista")
 
-    def _construir_grafo(self, productos: list[Producto]) -> dict[str, dict[str, UnidadDistancia]]:
-        distancias = {}
-        for origen in productos:
-            distancias[origen.codigo] = {}
-            for destino in productos:
+        # 2. Construir estructuras internas
+        self._productos = {p.codigo: p for p in self.productos}
+        self._distancias = {}
+
+        for origen in self.productos:
+            self._distancias[origen.codigo] = {}
+            for destino in self.productos:
                 if origen.codigo != destino.codigo:
                     metros = self._manhattan(origen, destino)
-                    distancias[origen.codigo][destino.codigo] = UnidadDistancia(metros)
-        return distancias
+                    self._distancias[origen.codigo][destino.codigo] = UnidadDistancia(metros)
+                    
+        return self
 
     def _manhattan(self, origen: Producto, destino: Producto) -> float:
         return abs(origen.x - destino.x) + abs(origen.y - destino.y)
