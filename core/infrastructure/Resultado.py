@@ -6,7 +6,7 @@ from .Producto import Producto
 from .Viaje import Viaje
 
 
-class Resultado:
+class Resultado(BaseModel):
     """
     Encapsula el resultado de ejecutar una heurística.
 
