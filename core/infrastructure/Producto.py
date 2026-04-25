@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Any
 
-class Producto:
+class Producto(BaseModel):
     """
     Representa un producto dentro del depósito.
     Cada producto es un nodo en el grafo de ubicaciones.
