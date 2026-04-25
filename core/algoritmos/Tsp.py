@@ -9,7 +9,7 @@ from ..infrastructure.Producto import Producto
 from ..utils.UnidadDistancia import UnidadDistancia
 
 
-class TSP:
+class TSP(BaseModel):
     """
     Resuelve el problema del viajante (TSP) usando la heurística
     del vecino más cercano sobre un grafo de ubicaciones.
