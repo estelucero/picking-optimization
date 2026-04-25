@@ -1,7 +1,9 @@
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
+from typing import Dict
 from .Producto import Producto
 
 
-class Pedido:
+class Pedido(BaseModel):
     """
     Representa un pedido de un cliente en el depósito.
 
@@ -10,43 +12,24 @@ class Pedido:
     - cliente: nombre o identificador del cliente
     - items: diccionario {Producto: cantidad} con los productos solicitados
     """
+    model_config = ConfigDict(frozen=True)
 
-    def __init__(self, codigo: str, cliente: str, items: dict[Producto, int]):
-        self._validar_string(codigo, "código")
-        self._validar_string(cliente, "cliente")
-        self._validar_items(items)
+    codigo: str = Field(..., min_length=1, description="Identificador único del pedido")
+    cliente: str = Field(..., min_length=1, description="Nombre o ID del cliente")
+    items: Dict[Producto, int] = Field(..., description="Diccionario {Producto: cantidad}")
 
-        self._codigo = codigo.strip()
-        self._cliente = cliente.strip()
-        self._items = dict(items)
+    @field_validator('codigo', 'cliente', mode='before')
+    @classmethod
+    def strip_strings(cls, v: str) -> str:
+        return v.strip() if isinstance(v, str) else v
 
-    def _validar_string(self, valor: str, campo: str) -> None:
-        if not isinstance(valor, str) or not valor.strip():
-            raise ValueError(f"El {campo} debe ser un string no vacío, se recibió: '{valor}'")
-
-    def _validar_items(self, items: dict) -> None:
-        if not isinstance(items, dict) or len(items) == 0:
-            raise ValueError("El pedido debe tener al menos un producto")
-        for producto, cantidad in items.items():
-            if not isinstance(producto, Producto):
-                raise ValueError(f"Las claves deben ser Producto, se recibió: {type(producto)}")
-            if not isinstance(cantidad, int) or cantidad <= 0:
-                raise ValueError(
-                    f"La cantidad del producto '{producto.codigo}' debe ser un entero mayor a 0, "
-                    f"se recibió: {cantidad}"
-                )
-
-    @property
-    def codigo(self) -> str:
-        return self._codigo
-
-    @property
-    def cliente(self) -> str:
-        return self._cliente
-
-    @property
-    def items(self) -> dict[Producto, int]:
-        return dict(self._items)
+    @field_validator('items')
+    @classmethod
+    def validar_cantidades_positivas(cls, v: Dict[Producto, int]) -> Dict[Producto, int]:
+        for prod, cant in v.items():
+            if not isinstance(cant, int) or cant <= 0:
+                raise ValueError(f"Cantidad inválida para {prod.codigo}: {cant}")
+        return v
 
     def total_items(self) -> int:
         """Retorna la cantidad total de ítems del pedido."""
