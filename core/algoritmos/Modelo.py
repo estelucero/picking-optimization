@@ -120,11 +120,13 @@ class Modelo(Heuristica):
         beta_picking: float,
     ) -> None:
         """Agrega un producto al carro del operario, cerrando viaje si está lleno."""
-        carro_lleno = operario.agregar_producto(producto, cantidad)
+        carro_lleno = operario.puedo_agregar(producto, cantidad)
 
         if carro_lleno:
             self._cerrar_viaje(operario)
             #se vacia el carro lleno y se agrega el producto a un nuevo carro
+            operario.agregar_producto(producto, cantidad)
+        else:
             operario.agregar_producto(producto, cantidad)
 
     def _cerrar_viaje(self, operario: Operario) -> None:

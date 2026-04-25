@@ -42,13 +42,12 @@ class Operario(BaseModel):
         if cantidad <= 0:
             raise ValueError(f"La cantidad debe ser mayor a 0, se recibió: {cantidad}")
 
-        peso_necesario = producto.peso * cantidad
-        
-        if peso_necesario > self.carro.capacidad_restante() and self.carro.peso_batch_actual() > 0:
-            return True  
-
         self.carro.agregar_producto(producto, cantidad)
-        return False
+        return True
+    
+    def puedo_agregar(self, producto: Producto, cantidad:int) -> bool:
+
+        return self.carro.puede_agregar(producto, cantidad)
 
     def agregar_viaje(self, viaje: Viaje) -> None:
         """Guarda un viaje completado en la lista de viajes."""
