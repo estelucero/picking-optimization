@@ -16,6 +16,8 @@ class Viaje:
         productos: dict[Producto, int],
         distancia: float,
         tiempo: float,
+        secuencia: list[str],
+        pesoTotal: float,
     ):
         if not isinstance(productos, dict) or len(productos) == 0:
             raise ValueError("El viaje debe tener al menos un producto")
@@ -27,6 +29,8 @@ class Viaje:
         self._productos = dict(productos)
         self._distancia = float(distancia)
         self._tiempo = float(tiempo)
+        self._secuencia = secuencia
+        self._pesoTotal = pesoTotal
 
     @property
     def productos(self) -> dict[Producto, int]:
@@ -40,9 +44,17 @@ class Viaje:
     def tiempo(self) -> float:
         return self._tiempo
 
+    def secuencia(self) -> list[str]:
+        """Retorna la secuancia de productos batch actual."""
+        return self._secuencia
+
+    def pesoTotal(self) -> float:
+        """Retorna la secuancia de productos batch actual."""
+        return self._pesoTotal
+
     def total_items(self) -> int:
         """Cantidad total de ítems en el viaje."""
         return sum(self._productos.values())
 
     def __repr__(self) -> str:
-        return f"Viaje(productos={len(self._productos)}, distancia={self._distancia}m, tiempo={self._tiempo}min)"
+        return f"Viaje(productos={len(self._productos)}, distancia={self._distancia}m, tiempo={self._tiempo}min), pesoTotal={self._pesoTotal})"

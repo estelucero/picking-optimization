@@ -1,3 +1,6 @@
+from typing import Any
+
+from core.utils import UnidadDistancia
 from ..interfaces.Grafo import Grafo
 from ..infrastructure.Pedido import Pedido
 from ..infrastructure.Producto import Producto
@@ -54,7 +57,7 @@ class TSP:
         ultimo = max(productos, key=lambda p: 0)
         return self._grafo.distancia(ultimo.codigo, self._deposito)
 
-    def _calcular_desde_nodos(self, nodos: set[str]) -> UnidadDistancia:
+    def _calcular_desde_nodos(self, nodos: set[str]) -> UnidadDistancia | tuple[UnidadDistancia, list[Any]]:
         """Calcula la distancia desde un set de códigos de nodos."""
         if not nodos:
             return UnidadDistancia(0.0)
@@ -67,12 +70,22 @@ class TSP:
         posicion_actual = self._deposito
         distancia_total = 0.0
 
+        secuencia :list(str) = []
+        secuencia.append(posicion_actual)
+
         while pendientes:
+            #Selecciona el producto pendiente a distancia minima entre posicion actual
             siguiente = min(pendientes, key=lambda n: self._grafo.distancia(posicion_actual, n).metros)
+            #suma diferencia de distancia
             distancia_total += self._grafo.distancia(posicion_actual, siguiente).metros
+            #cambia posicion actual al ultimo producto
             posicion_actual = siguiente
+            secuencia.append(posicion_actual)
+            #saca de la lista de pendientes al producto sumado
             pendientes.remove(siguiente)
 
         distancia_total += self._grafo.distancia(posicion_actual, self._deposito).metros
 
-        return UnidadDistancia(distancia_total)
+        secuencia.append(self._deposito)
+
+        return UnidadDistancia(distancia_total), secuencia
