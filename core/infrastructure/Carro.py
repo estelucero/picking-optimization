@@ -1,7 +1,9 @@
+from pydantic import BaseModel, Field
+from typing import Dict
 from .Producto import Producto
 
 
-class Carro:
+class Carro(BaseModel):
     """
     Representa el carro de picking de un operario.
 
@@ -12,26 +14,11 @@ class Carro:
     - capacidad_max_peso: peso máximo que soporta el carro en kg
     - batch: productos que tiene el carro
     """
-    capacidad_max_peso:float
-    batch:dict[Producto, int]
-    capacidad_usada:int
+    
+    capacidad_max_peso: float = Field(default=20.0, gt=0, description="Peso máximo en kg")
+    batch: Dict[Producto, int] = Field(default_factory=dict)
+    capacidad_usada: float = 0.0 
 
-    def __init__(self, capacidad_max_peso: float = 20.0):
-        if not isinstance(capacidad_max_peso, (int, float)):
-            raise ValueError("La capacidad debe ser numérica")
-        if capacidad_max_peso <= 0:
-            raise ValueError("La capacidad debe ser mayor a 0")
-        self._capacidad_max_peso = capacidad_max_peso
-        self.capacidad_usada = 0
-        self._batch: dict[Producto,int] = {}
-
-    @property
-    def capacidad_max_peso(self) -> float:
-        return self._capacidad_max_peso
-
-    @property
-    def batch(self) -> dict[Producto,int]:
-        return self._batch.copy()
 
     def peso_batch_actual(self) -> float:
         """Retorna el peso total acumulado en el batch actual."""
@@ -43,11 +30,10 @@ class Carro:
 
     def puede_agregar(self, producto: Producto, cantidad: int) -> bool:
         """Indica si el producto con esa cantidad se puede agregar."""
-        if not isinstance(producto, Producto):
-            raise ValueError(f"Se esperaba un Producto, se recibió: {type(producto)}")
         peso_nuevo = (producto.peso * cantidad) + self.capacidad_usada
         return peso_nuevo <= self.capacidad_max_peso 
-
+    
+    #! ERROR CONCEPTUAL 
     def agregar_producto(self, producto: Producto, cantidad:int) -> None:
         """
         Agrega un producto al carro.
