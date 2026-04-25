@@ -33,7 +33,7 @@ class Carro(BaseModel):
         peso_nuevo = (producto.peso * cantidad) + self.capacidad_usada
         return peso_nuevo <= self.capacidad_max_peso 
     
-    #! ERROR CONCEPTUAL 
+    
     def agregar_producto(self, producto: Producto, cantidad:int) -> None:
         """
         Agrega un producto al carro.
