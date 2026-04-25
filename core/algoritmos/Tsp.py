@@ -1,3 +1,5 @@
+from pydantic import BaseModel, Field, model_validator
+from typing import Set, Dict, List, Optional
 from typing import Any
 
 from core.utils import UnidadDistancia
@@ -16,26 +18,23 @@ class TSP:
     (punto de inicio y fin del recorrido).
     """
 
-    def __init__(self, grafo: Grafo, deposito: str):
-        if not isinstance(grafo, Grafo):
-            raise ValueError(f"Se esperaba un Grafo, se recibió: {type(grafo)}")
-        if deposito not in grafo.nodos():
-            raise ValueError(f"El depósito '{deposito}' no existe en el grafo")
-        self._grafo = grafo
-        self._deposito = deposito
+    grafo: Grafo
+    deposito: str = Field(..., description="Código del nodo depósito (inicio/fin)")
+
+    @model_validator(mode='after')
+    def validar_deposito_en_grafo(self) -> 'TSP':
+        if self.deposito not in self.grafo.nodos():
+            raise ValueError(f"El depósito '{self.deposito}' no existe en el grafo proporcionado.")
+        return self
+
 
     def calcular(self, batch: set[Pedido]) -> UnidadDistancia:
         """
         Calcula la distancia total del recorrido para un batch de pedidos,
         saliendo y volviendo al depósito.
         """
-        if not isinstance(batch, set):
-            raise ValueError("El batch debe ser un conjunto (set) de Pedido")
-
         nodos_a_visitar = set()
         for pedido in batch:
-            if not isinstance(pedido, Pedido):
-                raise ValueError(f"Todos los elementos del batch deben ser Pedido, se recibió: {type(pedido)}")
             for producto in pedido.productos():
                 nodos_a_visitar.add(producto.codigo)
 
@@ -70,7 +69,7 @@ class TSP:
         posicion_actual = self._deposito
         distancia_total = 0.0
 
-        secuencia :list(str) = []
+        secuencia :List[str] = []
         secuencia.append(posicion_actual)
 
         while pendientes:
