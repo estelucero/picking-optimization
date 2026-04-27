@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
+from pydantic import BaseModel
 
 from ..infrastructure.Operario import Operario
 from ..infrastructure.Pedido import Pedido
 from ..infrastructure.Resultado import Resultado
 
 
-class Heuristica(ABC):
+class Heuristica(BaseModel,ABC):
     """
     Interfaz que define el contrato de cualquier heurística
     o metaheurística de asignación de pedidos.

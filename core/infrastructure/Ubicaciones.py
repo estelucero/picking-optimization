@@ -5,7 +5,7 @@ from ..interfaces.Grafo import Grafo
 from ..utils.UnidadDistancia import UnidadDistancia
 
 
-class Ubicaciones(BaseModel, Grafo):
+class Ubicaciones(Grafo):
     """
     Implementación concreta de Grafo que construye automáticamente
     la matriz de distancias Manhattan a partir de una lista de productos.
@@ -47,7 +47,7 @@ class Ubicaciones(BaseModel, Grafo):
             for destino in self.productos:
                 if origen.codigo != destino.codigo:
                     metros = self._manhattan(origen, destino)
-                    self._distancias[origen.codigo][destino.codigo] = UnidadDistancia(metros)
+                    self._distancias[origen.codigo][destino.codigo] = UnidadDistancia(metros=metros)
                     
         return self
 

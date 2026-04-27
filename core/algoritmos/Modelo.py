@@ -5,6 +5,7 @@ from ..infrastructure.Pedido import Pedido
 from ..infrastructure.Resultado import Resultado
 from ..infrastructure.Viaje import Viaje
 from core.algoritmos.Tsp import TSP
+from core.utils.UnidadDistancia import UnidadDistancia
 
 
 class Modelo(Heuristica):
@@ -30,27 +31,24 @@ class Modelo(Heuristica):
 
         productos = self._desempaquetar_pedidos(pedidos)
 
-        tiempos: dict[Operario, float] = {op: op.tiempo_acumulado for op in operarios}
-
-        secuencia: list[Producto] = []
-
+        tiempo_minimo = 0
         for producto, cantidad in productos:
-            secuencia.append(producto)
-            mejor_operario, mejor_tiempo = self._elegir_operario(
-                producto, cantidad, operarios, tiempos, beta_picking
+            
+            mejor_operario, mejor_tiempo, distancia, secuencia = self._elegir_operario(
+                producto, cantidad, operarios, beta_picking
             )
-
-            tiempos[mejor_operario] = mejor_tiempo
-            self._agregar_producto(mejor_operario, producto, cantidad, beta_picking)
-
+            mejor_operario.agregar_tiempo(mejor_tiempo)
+            self._agregar_producto(mejor_operario, producto, cantidad, mejor_tiempo, distancia)
+    
         for op in operarios:
+            #!A revisar
             if op.carro.peso_batch_actual() > 0:
-                self._cerrar_viaje(op)
+                op.cerrar_viaje()
+            tiempo_minimo = tiempo_minimo + op.tiempo_acumulado
 
-        tiempo_minimo = sum(tiempos.values())
         asignacion = {op: op.viajes for op in operarios}
 
-        return Resultado(tiempo_minimo=tiempo_minimo, asignacion=asignacion, secuencia=secuencia)
+        return Resultado(tiempo_minimo=tiempo_minimo, asignacion=asignacion, secuencia=[])
 
     def _desempaquetar_pedidos(self, pedidos: list[Pedido]) -> list[tuple[Producto, int]]:
         """Desempaqueta todos los pedidos en una lista de (producto, cantidad)."""
@@ -65,83 +63,70 @@ class Modelo(Heuristica):
         producto: Producto,
         cantidad: int,
         operarios: list[Operario],
-        tiempos: dict[Operario, float],
         beta_picking: float,
-    ) -> tuple[Operario, float]:
+    ) -> tuple[Operario, float,UnidadDistancia, list[str]]:
         """Retorna el operario y el tiempo estimado mínimo."""
         mejor_operario = None
         mejor_tiempo = float("inf")
 
         for op in operarios:
-            tiempo_estimado = self._calcular_tiempo_estimado(
-                producto, cantidad, op, tiempos[op], beta_picking
+            tiempo_estimado, distancia, secuencia = self._calcular_tiempo_estimado(
+                producto, cantidad, op, beta_picking
             )
             if tiempo_estimado < mejor_tiempo:
                 mejor_tiempo = tiempo_estimado
                 mejor_operario = op
 
-        return mejor_operario, mejor_tiempo
+        return mejor_operario, mejor_tiempo, distancia, secuencia
 
     def _calcular_tiempo_estimado(
         self,
         producto: Producto,
         cantidad: int,
         operario: Operario,
-        tiempo_acumulado: float,
         beta_picking: float,
-    ) -> float:
+    ) -> tuple[float, UnidadDistancia, list[str]]:
         """Calcula el tiempo estimado si se agrega el producto."""
         carro = operario.carro
         peso_necesario = producto.peso * cantidad
         capacidad_restante = carro.capacidad_restante()
 
-        tiempo = tiempo_acumulado
+        tiempo = operario.tiempo_acumulado
 
         if peso_necesario <= capacidad_restante:
             batch_temporal = dict(carro.batch)
             batch_temporal[producto] = batch_temporal.get(producto, 0) + cantidad
+            distancia_retorno = 0
         else:
             batch_temporal = {producto: cantidad}
             if carro.batch:
                 distancia_retorno, secuencia = self._tsp.calcular_desde_productos(carro.batch)
-                tiempo += distancia_retorno.metros / operario.velocidad.metros_por_minuto
 
         distancia, secuencia = self._tsp.calcular_desde_productos(batch_temporal)
+        distancia = distancia.metros + distancia_retorno
         total_items = sum(batch_temporal.values())
-        t_batch = distancia.metros / operario.velocidad.metros_por_minuto + beta_picking * total_items
+        t_batch = distancia / operario.velocidad.metros_por_minuto + beta_picking * total_items
 
-        return tiempo + t_batch
+        
+        return (tiempo + t_batch, distancia, secuencia)
 
     def _agregar_producto(
         self,
         operario: Operario,
         producto: Producto,
         cantidad: int,
-        beta_picking: float,
+        tiempo: float,
+        distancia: float
     ) -> None:
         """Agrega un producto al carro del operario, cerrando viaje si está lleno."""
-        carro_lleno = operario.puedo_agregar(producto, cantidad)
+        carro_lleno = not (operario.puedo_agregar(producto, cantidad))
 
         if carro_lleno:
-            self._cerrar_viaje(operario)
+            operario.cerrar_viaje()
             #se vacia el carro lleno y se agrega el producto a un nuevo carro
-            operario.agregar_producto(producto, cantidad)
+            operario.agregar_producto(producto, cantidad, tiempo, distancia)
         else:
-            operario.agregar_producto(producto, cantidad)
-
-    def _cerrar_viaje(self, operario: Operario) -> None:
-        """Cierra el viaje actual del operario (incluye retorno al depósito)."""
-        carro = operario.carro
-        if carro.peso_batch_actual() == 0:
-            return
-
-        distancia, secuencia = self._tsp.calcular_desde_productos(carro.batch)
-        tiempo_viaje = distancia.metros / operario.velocidad.metros_por_minuto
-
-        viaje = Viaje(carro.batch, distancia.metros, tiempo_viaje, secuencia, carro.capacidad_usada)
-        operario.agregar_viaje(viaje)
-        #vaciar carrito
-        carro.vaciar()
+            operario.agregar_producto(producto, cantidad, tiempo, distancia)
 
     def _validar_parametros(
         self,

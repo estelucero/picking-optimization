@@ -10,29 +10,29 @@ from core.utils.Velocidad import Velocidad
 
 def main():
     productos = [
-        Producto("DEPOSITO", "Deposito", 1.0, 0, 0),
-        Producto("SKU-001", "Silla", 8.0, 3, 0),
-        Producto("SKU-002", "Monitor", 4.0, 3, 4),
-        Producto("SKU-003", "Teclado", 2.0, 6, 4),
-        Producto("SKU-004", "Lampara", 3.0, 6, 0),
-        Producto("SKU-005", "Mesa", 10.0, 0, 4),
+        Producto(codigo="DEPOSITO", nombre="Deposito",peso= 1.0, x=0, y=0),
+        Producto(codigo="SKU-001", nombre="Silla", peso=8.0, x=3, y=0),
+        Producto(codigo="SKU-002", nombre="Monitor", peso=4.0, x=3, y=4),
+        Producto(codigo="SKU-003", nombre="Teclado", peso=2.0, x=6, y=4),
+        Producto(codigo="SKU-004", nombre="Lampara", peso=3.0, x=6, y=0),
+        Producto(codigo="SKU-005", nombre="Mesa", peso=10.0, x=0, y=4),
     ]
 
     pedidos = [
-        Pedido("PED-001", "Juan", {productos[1]: 1}),
-        Pedido("PED-002", "Maria", {productos[2]: 2}),
-        Pedido("PED-003", "Luis", {productos[3]: 1, productos[4]: 1}),
-        Pedido("PED-004", "Ana", {productos[5]: 1}),
+        Pedido(codigo="PED-001", cliente="Juan", items={productos[1]: 1}),
+        Pedido(codigo="PED-002", cliente="Maria", items={productos[2]: 2}),
+        Pedido(codigo="PED-003", cliente="Luis", items={productos[3]: 1, productos[4]: 1}),
+        Pedido(codigo="PED-004", cliente="Ana", items={productos[5]: 1}),
     ]
 
-    velocidad = Velocidad(1.0)  # 1 m/s
+    velocidad = Velocidad(m_por_segundo=1.0)  # 1 m/s
     operarios = [
-        Operario("OP-001", "Operario 1", velocidad, Carro(30.0)),
-        Operario("OP-002", "Operario 2", velocidad, Carro(30.0)),
+        Operario(codigo="OP-001", nombre="Operario 1", velocidad=velocidad, carro=Carro(capacidad_max_peso=30.0)),
+        Operario(codigo="OP-002", nombre="Operario 2", velocidad=velocidad, carro=Carro(capacidad_max_peso=30.0)),
     ]
 
-    grafo = Ubicaciones(productos)
-    tsp = TSP(grafo, deposito="DEPOSITO")
+    grafo = Ubicaciones(productos=productos)
+    tsp = TSP(grafo=grafo, deposito="DEPOSITO")
     modelo = Modelo(tsp)
 
     import time
@@ -47,7 +47,7 @@ def main():
     for op, viajes in resultado.asignacion.items():
         print(f"\n{op.codigo}:")
         for i, viaje in enumerate(viajes):
-            print(f"  Viaje {i+1}: productos={[p.codigo for p in viaje.productos]}, distancia={viaje.distancia}m, tiempo={viaje.tiempo:.2f}min")
+            print(f"  Viaje {i+1}: productos={[p.codigo for p,_ in viaje.secuencia]}, distancia={viaje.distancia}m, tiempo={viaje.tiempo:.2f}min")
 
 
 if __name__ == "__main__":

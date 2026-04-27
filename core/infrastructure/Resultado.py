@@ -18,7 +18,7 @@ class Resultado(BaseModel):
 
     tiempo_minimo: float = Field(..., gt=0, description="Tiempo total de caminos mínimos en minutos")
     asignacion: Dict[Operario, List[Viaje]]
-    secuencia: list[Producto]
+    secuencia: list[Producto] = []
 
     def __repr__(self) -> str:
         return (

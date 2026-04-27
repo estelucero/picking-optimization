@@ -1,6 +1,7 @@
+from pydantic import BaseModel
 
 from abc import ABC, abstractmethod
-class Grafo(ABC):
+class Grafo(BaseModel, ABC):
     
     @abstractmethod
     def distancia(self, origen: str, destino: str) -> float:

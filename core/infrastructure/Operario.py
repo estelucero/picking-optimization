@@ -4,6 +4,7 @@ from .Carro import Carro
 from .Producto import Producto
 from .Viaje import Viaje
 from ..utils.Velocidad import Velocidad
+from ..algoritmos.Tsp import TSP
 
 
 class Operario(BaseModel):
@@ -21,8 +22,9 @@ class Operario(BaseModel):
     nombre: str = Field(..., min_length=1)
     velocidad: Velocidad
     carro: Carro
-    viajes: List[Viaje] = Field(default_factory=list)
-    tiempo_acumulado: float = 0.0
+    viajes: List[Viaje] = Field(default_factory=list) 
+    viaje_actual: Viaje = Viaje(distancia=0, tiempo=0, secuencia=[])
+    tiempo_acumulado: float = 0
 
     @field_validator('codigo', 'nombre', mode='before')
     @classmethod
@@ -34,7 +36,7 @@ class Operario(BaseModel):
             raise ValueError(f"El tiempo debe ser no negativo, se recibió: {tiempo}")
         self.tiempo_acumulado += tiempo
 
-    def agregar_producto(self, producto: Producto, cantidad: int) -> bool:
+    def agregar_producto(self, producto: Producto, cantidad: int, tiempo_nuevo:float, distancia_nueva: float) -> bool:
         """
         Agrega un producto al carro.
         Retorna True si el carro estaba lleno y se debe cerrar el viaje.
@@ -43,31 +45,33 @@ class Operario(BaseModel):
             raise ValueError(f"La cantidad debe ser mayor a 0, se recibió: {cantidad}")
 
         self.carro.agregar_producto(producto, cantidad)
+        self.viaje_actual.actualizar_viaje((producto,cantidad), tiempo_nuevo, distancia_nueva )
+        self.tiempo_acumulado = self.tiempo_acumulado + tiempo_nuevo
+
         return True
     
     def puedo_agregar(self, producto: Producto, cantidad:int) -> bool:
 
         return self.carro.puede_agregar(producto, cantidad)
+    
+    def cerrar_viaje(self) -> None:
 
-    def agregar_viaje(self, viaje: Viaje) -> None:
-        """Guarda un viaje completado en la lista de viajes."""
-        if not isinstance(viaje, Viaje):
-            raise ValueError(f"Se esperaba un Viaje, se recibió: {type(viaje)}")
-            
-        self.viajes.append(viaje)
-        self.tiempo_acumulado += viaje.tiempo
+        self.viajes.append(self.viaje_actual)
+        self.viaje_actual = Viaje(distancia=0, tiempo=0, secuencia=[])
+        self.carro.vaciar()
+        
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Operario):
             return False
-        return self._codigo == other._codigo
+        return self.codigo == other.codigo
 
     def __hash__(self) -> int:
-        return hash(self._codigo)
+        return hash(self.codigo)
 
     def __repr__(self) -> str:
         return (
-            f"Operario(codigo='{self._codigo}', nombre='{self._nombre}', "
+            f"Operario(codigo='{self.codigo}', nombre='{self._nombre}', "
             f"velocidad={self._velocidad.m_por_segundo}m/s, "
             f"tiempo_acumulado={self._tiempo_acumulado}min)"
         )

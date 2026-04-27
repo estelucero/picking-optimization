@@ -22,7 +22,7 @@ class TSP(BaseModel):
     deposito: str = Field(..., description="Código del nodo depósito (inicio/fin)")
 
     @model_validator(mode='after')
-    def validar_deposito_en_grafo(self) -> 'TSP':
+    def validar_deposito_engrafo(self) -> 'TSP':
         if self.deposito not in self.grafo.nodos():
             raise ValueError(f"El depósito '{self.deposito}' no existe en el grafo proporcionado.")
         return self
@@ -54,19 +54,19 @@ class TSP(BaseModel):
         if not productos:
             return UnidadDistancia(0.0)
         ultimo = max(productos, key=lambda p: 0)
-        return self._grafo.distancia(ultimo.codigo, self._deposito)
+        return self.grafo.distancia(ultimo.codigo, self.deposito)
 
-    def _calcular_desde_nodos(self, nodos: set[str]) -> UnidadDistancia | tuple[UnidadDistancia, list[Any]]:
+    def _calcular_desde_nodos(self, nodos: set[str]) -> tuple[UnidadDistancia, list[Any]]:
         """Calcula la distancia desde un set de códigos de nodos."""
         if not nodos:
             return UnidadDistancia(0.0)
 
-        nodos_invalidos = nodos - self._grafo.nodos()
+        nodos_invalidos = nodos - self.grafo.nodos()
         if nodos_invalidos:
             raise ValueError(f"Los siguientes nodos no existen en el grafo: {nodos_invalidos}")
 
         pendientes = set(nodos)
-        posicion_actual = self._deposito
+        posicion_actual = self.deposito
         distancia_total = 0.0
 
         secuencia :List[str] = []
@@ -74,17 +74,17 @@ class TSP(BaseModel):
 
         while pendientes:
             #Selecciona el producto pendiente a distancia minima entre posicion actual
-            siguiente = min(pendientes, key=lambda n: self._grafo.distancia(posicion_actual, n).metros)
+            siguiente = min(pendientes, key=lambda n: self.grafo.distancia(posicion_actual, n).metros)
             #suma diferencia de distancia
-            distancia_total += self._grafo.distancia(posicion_actual, siguiente).metros
+            distancia_total += self.grafo.distancia(posicion_actual, siguiente).metros
             #cambia posicion actual al ultimo producto
             posicion_actual = siguiente
             secuencia.append(posicion_actual)
             #saca de la lista de pendientes al producto sumado
             pendientes.remove(siguiente)
 
-        distancia_total += self._grafo.distancia(posicion_actual, self._deposito).metros
+        distancia_total += self.grafo.distancia(posicion_actual, self.deposito).metros
 
-        secuencia.append(self._deposito)
+        secuencia.append(self.deposito)
 
-        return UnidadDistancia(distancia_total), secuencia
+        return UnidadDistancia(metros=distancia_total), secuencia

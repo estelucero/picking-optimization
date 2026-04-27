@@ -11,15 +11,15 @@ class Viaje(BaseModel):
     - distancia: distancia total recorrida en metros
     - tiempo: tiempo total del viaje en minutos
     """
-    productos: dict[Producto, int] = Field(..., min_length=1)
+    #productos: dict[Producto, int] = Field(..., min_length=1)
     distancia: float = Field(..., ge=0)
     tiempo: float = Field(..., ge=0)
-    secuencia: list[str]
-    peso_total: float = Field(..., alias="pesoTotal", ge=0)
+    secuencia: list[tuple[Producto,int]]
+    
 
     # Configuración de Pydantic
     model_config = {
-        "frozen": True,                
+                        
         "populate_by_name": True
     }
 
@@ -32,6 +32,11 @@ class Viaje(BaseModel):
     @property
     def valor_distancia(self) -> float:
         return self.distancia
+    
+    def actualizar_viaje(self, paso: tuple[Producto,int], tiempo_nuevo: float, distancia_nueva: float) -> None:
+        self.distancia = self.distancia + distancia_nueva
+        self.tiempo = self.tiempo + tiempo_nuevo
+        self.secuencia.append(paso)
 
     def __repr__(self) -> str:
         return f"Viaje(productos={len(self._productos)}, distancia={self._distancia}m, tiempo={self._tiempo}min), pesoTotal={self._pesoTotal})"

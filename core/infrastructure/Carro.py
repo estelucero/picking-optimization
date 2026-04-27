@@ -48,28 +48,28 @@ class Carro(BaseModel):
                 f"({peso_nuevo}kg > {self._capacidad_max_peso}kg)"
             )
 
-        if producto in self._batch:
-            self._batch[producto] += cantidad
+        if producto in self.batch:
+            self.batch[producto] += cantidad
         else:
-            self._batch[producto] = cantidad
+            self.batch[producto] = cantidad
         
         self.capacidad_usada += producto.peso * cantidad
         
 
     def vaciar(self) -> dict[Producto, int]:
         """Vacía el carro y retorna los productos que tenía."""
-        batch_anterior = self._batch.copy()
-        self._batch.clear()
+        batch_anterior = self.batch.copy()
+        self.batch.clear()
         self.capacidad_usada = 0
         return batch_anterior
 
     def batch_actual(self) -> dict[Producto, int]:
         """Alias para batch (para compatibilidad)."""
-        return self._batch.copy()
+        return self.batch.copy()
 
     def total_batches(self) -> int:
         """Cantidad de productos únicos en batch."""
-        return len(self._batch)
+        return len(self.batch)
 
     def __repr__(self) -> str:
         return (
