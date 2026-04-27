@@ -44,7 +44,7 @@ class Modelo(Heuristica):
             #!A revisar
             if op.carro.peso_batch_actual() > 0:
                 op.cerrar_viaje()
-            # Calculate actual total time from completed trips instead of accumulated estimates
+            
             for viaje in op.viajes:
                 tiempo_minimo += viaje.tiempo
 
@@ -110,7 +110,7 @@ class Modelo(Heuristica):
         t_batch = distancia / operario.velocidad.metros_por_minuto + beta_picking * total_items
 
         
-        return (tiempo + t_batch, distancia, secuencia)
+        return (t_batch, distancia, secuencia)
 
     def _agregar_producto(
         self,
