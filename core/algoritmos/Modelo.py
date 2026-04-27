@@ -44,7 +44,9 @@ class Modelo(Heuristica):
             #!A revisar
             if op.carro.peso_batch_actual() > 0:
                 op.cerrar_viaje()
-            tiempo_minimo = tiempo_minimo + op.tiempo_acumulado
+            # Calculate actual total time from completed trips instead of accumulated estimates
+            for viaje in op.viajes:
+                tiempo_minimo += viaje.tiempo
 
         asignacion = {op: op.viajes for op in operarios}
 
