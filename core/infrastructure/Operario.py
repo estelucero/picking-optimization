@@ -45,8 +45,7 @@ class Operario(BaseModel):
             raise ValueError(f"La cantidad debe ser mayor a 0, se recibió: {cantidad}")
 
         self.carro.agregar_producto(producto, cantidad)
-        self.viaje_actual.actualizar_viaje((producto,cantidad), tiempo_nuevo, distancia_nueva )
-        self.tiempo_acumulado = self.tiempo_acumulado + tiempo_nuevo
+        self.viaje_actual.actualizar_viaje((producto,cantidad), tiempo_nuevo, distancia_nueva)
 
         return True
     

@@ -47,7 +47,8 @@ def main():
     for op, viajes in resultado.asignacion.items():
         print(f"\n{op.codigo}:")
         for i, viaje in enumerate(viajes):
-            print(f"  Viaje {i+1}: productos={[p.codigo for p,_ in viaje.secuencia]}, distancia={viaje.distancia}m, tiempo={viaje.tiempo:.2f}min")
+            productos_info = [(p.codigo, cant) for p, cant in viaje.secuencia]
+            print(f"  Viaje {i+1}: productos={productos_info}, distancia={viaje.distancia.metros}m, tiempo={viaje.tiempo:.2f}min")
 
 
 if __name__ == "__main__":

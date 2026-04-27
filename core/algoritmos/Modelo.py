@@ -98,19 +98,20 @@ class Modelo(Heuristica):
         if peso_necesario <= capacidad_restante:
             batch_temporal = dict(carro.batch)
             batch_temporal[producto] = batch_temporal.get(producto, 0) + cantidad
-            distancia_retorno = 0
+            distancia_retorno_metros = 0
         else:
             batch_temporal = {producto: cantidad}
             if carro.batch:
-                distancia_retorno, secuencia = self._tsp.calcular_desde_productos(carro.batch)
+                distancia_retorno_metros, secuencia = self._tsp.calcular_desde_productos(carro.batch)
+                distancia_retorno_metros = distancia_retorno_metros.metros
 
         distancia, secuencia = self._tsp.calcular_desde_productos(batch_temporal)
-        distancia = distancia.metros + distancia_retorno
+        distancia_total_metros = distancia.metros + distancia_retorno_metros
         total_items = sum(batch_temporal.values())
-        t_batch = distancia / operario.velocidad.metros_por_minuto + beta_picking * total_items
+        t_batch = distancia_total_metros / operario.velocidad.metros_por_minuto + beta_picking * total_items
 
         
-        return (t_batch, distancia, secuencia)
+        return (t_batch, UnidadDistancia(metros=distancia_total_metros), secuencia)
 
     def _agregar_producto(
         self,

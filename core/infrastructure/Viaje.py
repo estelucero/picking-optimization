@@ -34,8 +34,8 @@ class Viaje(BaseModel):
         return self.distancia
     
     def actualizar_viaje(self, paso: tuple[Producto,int], tiempo_nuevo: float, distancia_nueva: float) -> None:
-        self.distancia = self.distancia + distancia_nueva
-        self.tiempo = self.tiempo + tiempo_nuevo
+        self.distancia = distancia_nueva
+        self.tiempo = tiempo_nuevo
         self.secuencia.append(paso)
 
     def __repr__(self) -> str:
