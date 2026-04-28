@@ -37,7 +37,7 @@ class Modelo(Heuristica):
             mejor_operario, mejor_tiempo, distancia, secuencia = self._elegir_operario(
                 producto, cantidad, operarios, beta_picking
             )
-            mejor_operario.agregar_tiempo(mejor_tiempo)
+            # mejor_operario.agregar_tiempo(mejor_tiempo)
             self._agregar_producto(mejor_operario, producto, cantidad, mejor_tiempo, distancia)
     
         for op in operarios:
@@ -71,12 +71,13 @@ class Modelo(Heuristica):
         mejor_operario = None
         mejor_tiempo = float("inf")
 
+        #Tiempo proyectado = tiempo acumulado + tiempo batch actual
         for op in operarios:
             tiempo_estimado, distancia, secuencia = self._calcular_tiempo_estimado(
                 producto, cantidad, op, beta_picking
             )
-            if tiempo_estimado < mejor_tiempo:
-                mejor_tiempo = tiempo_estimado
+            if tiempo_estimado + op.tiempo_acumulado < mejor_tiempo:
+                mejor_tiempo = tiempo_estimado + op.tiempo_acumulado
                 mejor_operario = op
 
         return mejor_operario, mejor_tiempo, distancia, secuencia
@@ -94,19 +95,19 @@ class Modelo(Heuristica):
         capacidad_restante = carro.capacidad_restante()
 
         tiempo = operario.tiempo_acumulado
+        distancia_acumulada: UnidadDistancia = UnidadDistancia(metros=0)
 
         if peso_necesario <= capacidad_restante:
             batch_temporal = dict(carro.batch)
             batch_temporal[producto] = batch_temporal.get(producto, 0) + cantidad
-            distancia_retorno_metros = 0
         else:
+            #TODO: Que pasa si supera la capacidad?
+            batch_temporal_acumulado = dict(carro.batch)
+            distancia_acumulada, secuencia = self._tsp.calcular_desde_productos(batch_temporal_acumulado)
             batch_temporal = {producto: cantidad}
-            if carro.batch:
-                distancia_retorno_metros, secuencia = self._tsp.calcular_desde_productos(carro.batch)
-                distancia_retorno_metros = distancia_retorno_metros.metros
 
         distancia, secuencia = self._tsp.calcular_desde_productos(batch_temporal)
-        distancia_total_metros = distancia.metros + distancia_retorno_metros
+        distancia_total_metros = distancia.metros + distancia_acumulada.metros
         total_items = sum(batch_temporal.values())
         t_batch = distancia_total_metros / operario.velocidad.metros_por_minuto + beta_picking * total_items
 

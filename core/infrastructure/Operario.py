@@ -56,6 +56,7 @@ class Operario(BaseModel):
     def cerrar_viaje(self) -> None:
 
         self.viajes.append(self.viaje_actual)
+        self.agregar_tiempo(self.viaje_actual.tiempo)
         self.viaje_actual = Viaje(distancia=0, tiempo=0, secuencia=[])
         self.carro.vaciar()
         

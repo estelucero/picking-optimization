@@ -9,9 +9,9 @@ def experimento():
     pedidos = crear_pedidos_desde_productos(productos, cantidad_pedidos=20, items_por_pedido=(1, 3))
     operarios = crear_operarios(cantidad=3, velocidad_metros_por_segundo=1.0, capacidad_carro=30.0)
 
-    grafo = Ubicaciones(productos)
-    tsp = TSP(grafo, deposito="DEPOSITO")
-    modelo = Modelo(tsp)
+    grafo = Ubicaciones(productos=productos)
+    tsp = TSP(grafo=grafo, deposito="DEPOSITO")
+    modelo = Modelo(tsp=tsp)
 
     resultado = modelo.resolver(pedidos, operarios, beta_picking=0.5)
 
@@ -23,7 +23,7 @@ def experimento():
         "cantidad_pedidos": len(pedidos),
         "cantidad_operarios": len(operarios),
         "cantidad_viajes_total": viajes_total,
-        "secuencia": [p.codigo for p in resultado.secuencia],
+        # "secuencia": [p.codigo for p in resultado.secuencia],
         "operarios": resultado.asignacion
     }
 
@@ -34,12 +34,12 @@ if __name__ == "__main__":
     print(f"Tiempo mínimo: {resultado['tiempo_minimo_min']:.2f} min")
     print(f"Pedidos: {resultado['cantidad_pedidos']}")
     print(f"Operarios: {resultado['cantidad_operarios']}")
-    print(f"secuancia: {resultado['secuencia']}")
+    # print(f"secuancia: {resultado['secuencia']}")
     # print(f"Operaciones: {resultado['operarios']}")
-    for op in resultado['operarios']:
-        print(op)
-        for viaje in op.viajes:
-            print(viaje)
-            secuencia = viaje.secuencia()
-            for producto in secuencia:
-                print(producto)
+    # for op in resultado['operarios']:
+    #     print(op)
+        # for viaje in op.viajes:
+        #     print(viaje)
+        #     secuencia = viaje.secuencia()
+        #     for producto in secuencia:
+        #         print(producto)
