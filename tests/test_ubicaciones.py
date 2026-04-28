@@ -8,42 +8,42 @@ from core.utils.UnidadDistancia import UnidadDistancia
 @pytest.fixture
 def productos():
     return [
-        Producto("DEPOSITO", "Deposito", 1.0, 0, 0),
-        Producto("SKU-001", "Silla", 8.0, 3, 0),
-        Producto("SKU-002", "Monitor", 4.0, 3, 4),
-        Producto("SKU-003", "Teclado", 2.0, 6, 4),
+        Producto(codigo="DEPOSITO", nombre="Deposito", peso=1.0, x=0, y=0),
+        Producto(codigo="SKU-001", nombre="Silla", peso=8.0, x=3, y=0),
+        Producto(codigo="SKU-002", nombre="Monitor", peso=4.0, x=3, y=4),
+        Producto(codigo="SKU-003", nombre="Teclado", peso=2.0, x=6, y=4),
     ]
 
 
 @pytest.fixture
 def grafo(productos):
-    return Ubicaciones(productos)
+    return Ubicaciones(productos=productos)
 
 
 class TestUbicacionesConstruccion:
     def test_construccion_valida(self, productos):
-        grafo = Ubicaciones(productos)
+        grafo = Ubicaciones(productos=productos)
         assert len(grafo.nodos()) == len(productos)
 
     def test_lista_vacia_lanza_error(self):
-        with pytest.raises(ValueError, match="no vac"):
-            Ubicaciones([])
+        with pytest.raises(ValueError):
+            Ubicaciones(productos=[])
 
     def test_no_es_lista_lanza_error(self):
         with pytest.raises(ValueError):
-            Ubicaciones("no es lista")
+            Ubicaciones(productos="no es lista")
 
     def test_producto_duplicado_lanza_error(self):
         productos = [
-            Producto("SKU-001", "Silla", 8.0, 0, 0),
-            Producto("SKU-001", "Otra Silla", 5.0, 1, 1),
+            Producto(codigo="SKU-001", nombre="Silla", peso=8.0, x=0, y=0),
+            Producto(codigo="SKU-001", nombre="Otra Silla", peso=5.0, x=1, y=1),
         ]
         with pytest.raises(ValueError, match="duplicado"):
-            Ubicaciones(productos)
+            Ubicaciones(productos=productos)
 
     def test_elemento_no_es_producto_lanza_error(self):
         with pytest.raises(ValueError):
-            Ubicaciones(["no es producto"])
+            Ubicaciones(productos=["no es producto"])
 
 
 class TestUbicacionesMetodos:

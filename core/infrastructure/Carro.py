@@ -45,7 +45,7 @@ class Carro(BaseModel):
         if not self.puede_agregar(producto, cantidad):
             raise ValueError(
                 f"El pedido '{producto.codigo}' supera por sí solo la capacidad del carro "
-                f"({peso_nuevo}kg > {self._capacidad_max_peso}kg)"
+                f"({peso_nuevo}kg > {self.capacidad_max_peso}kg)"
             )
 
         if producto in self.batch:
@@ -73,7 +73,7 @@ class Carro(BaseModel):
 
     def __repr__(self) -> str:
         return (
-            f"Carro(capacidad_max_peso={self._capacidad_max_peso}kg, "
+            f"Carro(capacidad_max_peso={self.capacidad_max_peso}kg, "
             f"batch={self.batch}, "
             f"peso_actual={self.capacidad_usada}kg)"
         )

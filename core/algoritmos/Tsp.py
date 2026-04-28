@@ -38,11 +38,13 @@ class TSP(BaseModel):
             for producto in pedido.productos():
                 nodos_a_visitar.add(producto.codigo)
 
-        return self._calcular_desde_nodos(nodos_a_visitar)
+        distancia, _ = self._calcular_desde_nodos(nodos_a_visitar)
+        return distancia
 
-    def calcular_desde_productos(self, productos: dict[Producto, int]) -> UnidadDistancia:
+    def calcular_desde_productos(self, productos: dict[Producto, int]) -> tuple[UnidadDistancia, list[Any]]:
         """
         Calcula la distancia desde un dict de productos.
+        Retorna tupla (distancia, secuencia).
         """
         nodos_a_visitar = {p.codigo for p in productos.keys()}
         return self._calcular_desde_nodos(nodos_a_visitar)
@@ -52,14 +54,14 @@ class TSP(BaseModel):
         Calcula la distancia desde el último producto hasta el depósito.
         """
         if not productos:
-            return UnidadDistancia(0.0)
+            return UnidadDistancia(metros=0.0)
         ultimo = max(productos, key=lambda p: 0)
         return self.grafo.distancia(ultimo.codigo, self.deposito)
 
     def _calcular_desde_nodos(self, nodos: set[str]) -> tuple[UnidadDistancia, list[Any]]:
-        """Calcula la distancia desde un set de códigos de nodos."""
+        """Calcula la distancia desde un set de cdigos de nodos."""
         if not nodos:
-            return UnidadDistancia(0.0)
+            return UnidadDistancia(metros=0.0), []
 
         nodos_invalidos = nodos - self.grafo.nodos()
         if nodos_invalidos:

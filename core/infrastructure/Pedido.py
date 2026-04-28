@@ -26,29 +26,35 @@ class Pedido(BaseModel):
     @field_validator('items')
     @classmethod
     def validar_cantidades_positivas(cls, v: Dict[Producto, int]) -> Dict[Producto, int]:
+        if not isinstance(v, dict):
+            raise ValueError("items debe ser un diccionario")
+        if len(v) == 0:
+            raise ValueError("items debe tener al menos un producto")
         for prod, cant in v.items():
+            if not isinstance(prod, Producto):
+                raise ValueError("Las claves deben ser Producto")
             if not isinstance(cant, int) or cant <= 0:
                 raise ValueError(f"Cantidad inválida para {prod.codigo}: {cant}")
         return v
 
     def total_items(self) -> int:
         """Retorna la cantidad total de ítems del pedido."""
-        return sum(self._items.values())
+        return sum(self.items.values())
 
     def productos(self) -> set[Producto]:
         """Retorna el conjunto de productos del pedido (sin cantidades)."""
-        return set(self._items.keys())
+        return set(self.items.keys())
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Pedido):
             return False
-        return self._codigo == other._codigo
+        return self.codigo == other.codigo
 
     def __hash__(self) -> int:
-        return hash(self._codigo)
+        return hash(self.codigo)
 
     def __repr__(self) -> str:
         return (
-            f"Pedido(codigo='{self._codigo}', cliente='{self._cliente}', "
+            f"Pedido(codigo='{self.codigo}', cliente='{self.cliente}', "
             f"total_items={self.total_items()})"
         )
