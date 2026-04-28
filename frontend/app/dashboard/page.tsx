@@ -34,7 +34,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-6 p-8">
           <div className="space-y-4">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-              Inicio rapido.
+              Inicio rapido
             </h2>
             <p className="text-slate-600 dark:text-slate-400">
               Empieza a crear nuevos experimentos para optimizar la creación de
