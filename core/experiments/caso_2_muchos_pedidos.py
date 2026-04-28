@@ -24,7 +24,7 @@ def experimento():
         "cantidad_operarios": len(operarios),
         "cantidad_viajes_total": viajes_total,
         # "secuencia": [p.codigo for p in resultado.secuencia],
-        "operarios": resultado.asignacion
+        "mapa_operarios": resultado.asignacion
     }
 
 
@@ -33,13 +33,6 @@ if __name__ == "__main__":
     print(f"Caso: {resultado['caso']}")
     print(f"Tiempo mínimo: {resultado['tiempo_minimo_min']:.2f} min")
     print(f"Pedidos: {resultado['cantidad_pedidos']}")
-    print(f"Operarios: {resultado['cantidad_operarios']}")
-    # print(f"secuancia: {resultado['secuencia']}")
-    # print(f"Operaciones: {resultado['operarios']}")
-    # for op in resultado['operarios']:
-    #     print(op)
-        # for viaje in op.viajes:
-        #     print(viaje)
-        #     secuencia = viaje.secuencia()
-        #     for producto in secuencia:
-        #         print(producto)
+    print(f"Operarios: {resultado['cantidad_operarios']} ")
+    print(f"cantidad_viajes_total: {resultado['cantidad_viajes_total']} \n")
+    print(f" Operarios: {resultado['mapa_operarios']} \n")

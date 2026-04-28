@@ -31,6 +31,6 @@ class Producto(BaseModel):
  
     def __repr__(self) -> str:
         return (
-            f"Producto(codigo='{self.codigo}', nombre='{self.nombre}', "
+            f" \nProducto(codigo='{self.codigo}', nombre='{self.nombre}', "
             f"peso={self.peso}kg, x={self.x}, y={self.y})"
         )

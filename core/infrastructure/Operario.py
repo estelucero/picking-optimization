@@ -71,7 +71,8 @@ class Operario(BaseModel):
 
     def __repr__(self) -> str:
         return (
-            f"Operario(codigo='{self.codigo}', nombre='{self._nombre}', "
-            f"velocidad={self._velocidad.m_por_segundo}m/s, "
-            f"tiempo_acumulado={self._tiempo_acumulado}min)"
+            f"\n \n Operario(codigo='{self.codigo}', nombre='{self.nombre}', "
+            f"velocidad={self.velocidad.m_por_segundo}m/s, "
+            f"tiempo_acumulado={self.tiempo_acumulado}min) \n"
+
         )

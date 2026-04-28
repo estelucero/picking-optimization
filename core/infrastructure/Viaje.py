@@ -38,5 +38,11 @@ class Viaje(BaseModel):
         self.tiempo = tiempo_nuevo
         self.secuencia.append(paso)
 
+    def getPesoTotal(self):
+        sumaPesos = 0
+        for producto, cantidad in self.secuencia:
+            sumaPesos += producto.peso * cantidad
+        return sumaPesos
+
     def __repr__(self) -> str:
-        return f"Viaje(productos={len(self._productos)}, distancia={self._distancia}m, tiempo={self._tiempo}min), pesoTotal={self._pesoTotal})"
+        return f"Viaje(distancia={self.distancia}m, tiempo={self.tiempo} min), pesoTotal= {self.getPesoTotal()},\n secuencia={self.secuencia})) \n"
