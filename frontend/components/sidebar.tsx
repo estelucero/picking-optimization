@@ -35,10 +35,10 @@ export function Sidebar() {
           </div>
           <div>
             <p className="font-bold text-slate-900 dark:text-white text-base">
-              Silk Optima
+              Picking Optimization
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              WAREHOUSE ADMIN
+              DEPOSITO ADMIN
             </p>
           </div>
         </Link>
