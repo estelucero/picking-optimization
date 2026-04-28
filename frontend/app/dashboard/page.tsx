@@ -84,20 +84,20 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
           {
-            label: "Total Products Mapped",
-            value: "42,891",
+            label: "Total Depositos Creados",
+            value: "1",
             icon: Package,
           },
           {
-            label: "Latest Experiment Result",
-            value: "98.2%",
-            subtitle: "Accuracy",
+            label: "Ultimo Experimento Resuelto",
+            value: "18 Mins",
+            // subtitle: "Accuracy",
             icon: TrendingUp,
           },
           {
-            label: "System Uptime",
-            value: "365",
-            subtitle: "Days",
+            label: "Tiempo de Procesamiento Promedio",
+            value: "0.65 ms",
+            // subtitle: "Days",
             icon: Clock,
           },
         ].map((metric, idx) => {
@@ -118,11 +118,11 @@ export default function Dashboard() {
                   <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
                     {metric.value}
                   </p>
-                  {metric.subtitle && (
+                  {/* {metric.subtitle && (
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                       {metric.subtitle}
                     </p>
-                  )}
+                  )} */}
                 </div>
               </div>
             </div>
@@ -131,7 +131,7 @@ export default function Dashboard() {
       </div>
 
       {/* Chart Placeholder */}
-      <div className="grid grid-cols-2 gap-6">
+      {/* <div className="grid grid-cols-2 gap-6">
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-blue-200 dark:border-slate-700 p-8 shadow-lg h-96 flex flex-col items-center justify-center">
           <div className="text-6xl mb-4">📊</div>
           <p className="text-slate-500 dark:text-slate-400 font-medium">
@@ -151,7 +151,7 @@ export default function Dashboard() {
             Coming soon
           </p>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
