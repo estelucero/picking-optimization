@@ -31,7 +31,7 @@ export function Sidebar() {
       <div className="mb-8 pl-2 pb-4 border-b border-blue-100 dark:border-slate-700">
         <Link href="/dashboard" className="flex items-center gap-2 group">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 via-cyan-500 to-blue-600 flex items-center justify-center group-hover:shadow-lg transition-all">
-            <span className="text-white font-bold text-base">SI</span>
+            <span className="text-white font-bold text-base">PO</span>
           </div>
           <div>
             <p className="font-bold text-slate-900 dark:text-white text-base">
