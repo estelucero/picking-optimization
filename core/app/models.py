@@ -17,6 +17,7 @@ class Experimento(BaseModel):
     tamaño_matriz: int
     cantidad_pedidos: int
     cantidad_max_operarios: int
+    iteraciones: int
     casos: list[Caso]
 
 
