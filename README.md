@@ -67,3 +67,7 @@ Gráficos comparativos entre experimentos: histogramas, box plots, y curvas de t
 - Comparativas visuales entre configuraciones
 
 ---
+
+## deploy api
+
+uvicorn mainApi:app --reload
