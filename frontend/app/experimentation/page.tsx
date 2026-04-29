@@ -106,7 +106,7 @@ export default function ExperimentationPage() {
           </p>
           <Link href="/product-mapping">
             <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-              Go to Product Mapping
+              Crea una distribucion
             </Button>
           </Link>
         </Card>
