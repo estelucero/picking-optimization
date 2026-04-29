@@ -10,17 +10,17 @@ export function Sidebar() {
   const navItems = [
     {
       href: "/dashboard",
-      label: "Dashboard",
+      label: "Inicio",
       icon: LayoutGrid,
     },
     {
       href: "/product-mapping",
-      label: "Product Mapping",
+      label: "Distribuciones",
       icon: MapPin,
     },
     {
       href: "/experimentation",
-      label: "Experimentation",
+      label: "Experimentos",
       icon: Zap,
     },
   ];
