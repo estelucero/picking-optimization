@@ -46,3 +46,8 @@ pytest tests/ -v
 ```bash
 python -m core.main
 ```
+Create uvicorn Run in IDE
+- new python run
+- module: uvicorn
+- parameters: mainApi:app --reload
+- workingDir: 
