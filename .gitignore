@@ -211,3 +211,6 @@ __marimo__/
 !.idea/codeStyles/
 !.idea/vcs.xml
 !.idea/runConfigurations/
+
+#Volumes    
+mongo/data
