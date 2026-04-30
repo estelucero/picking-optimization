@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from core.app.database import experimentos_collection
 from core.app.models import Experimento
-from core.app.services import ExperimentoService
 
 router = APIRouter(
     prefix="/experimentos",
@@ -9,13 +8,13 @@ router = APIRouter(
 )
 @router.post("/")
 def create_user(experimento: Experimento):
-    experimento = ExperimentoService(tamaño_matriz=experimento.tamaño_matriz,
-                                     cantidad_pedidos=experimento.cantidad_pedidos,
-                                     cantidad_operarios=experimento.cantidad_max_operarios,
-                                     iteraciones=experimento.iteraciones)
-
-    result = experimento.promedio_experimentos()
-    print(result)
+    # experimento = ExperimentoService(tamaño_matriz=experimento.tamaño_matriz,
+    #                                  cantidad_pedidos=experimento.cantidad_pedidos,
+    #                                  cantidad_operarios=experimento.cantidad_max_operarios,
+    #                                  iteraciones=experimento.iteraciones)
+    #
+    # result = experimento.promedio_experimentos()
+    # print(result)
     result = experimentos_collection.insert_one(experimento.model_dump())
     return {"id": str(result.inserted_id)}
 
