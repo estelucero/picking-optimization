@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from core.app.database import experimentos_collection
-from core.app.models import Experimento
-from core.app.services import ExperimentoService
+from api.database import experimentos_collection
+from api.models import Experimento
+from api.services import ExperimentoService
 
 router = APIRouter(
     prefix="/experimentos",

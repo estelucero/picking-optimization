@@ -1,6 +1,6 @@
-from core.app.routers import experimentos
+from api.routers import experimentos
 from fastapi import FastAPI
-from core.app.routers import users
+from api.routers import users
 
 app = FastAPI()
 

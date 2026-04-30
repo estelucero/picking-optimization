@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from core.app.database import users_collection
-from core.app.models import User
+from api.database import users_collection
+from api.models import User
 
 router = APIRouter(
     prefix="/users",
