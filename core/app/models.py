@@ -20,4 +20,14 @@ class Experimento(BaseModel):
     iteraciones: int
     casos: list[Caso]
 
+class Producto(BaseModel):
+    nombre: str
+    peso: float
+    x: float
+    y: float
+
+class Distribucion(BaseModel):
+    nombre: str
+    productos: list[Producto]
+
 
