@@ -1,20 +1,26 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface SimulationFormProps {
-  coordinates: Array<{ id: number; x: number; y: number; name: string }>
-  averageOrders: number
-  maxOperarios: number
-  onAverageOrdersChange: (value: number) => void
-  onMaxOperariosChange: (value: number) => void
-  onRun: () => void
-  isLoading: boolean
-  showSaveOption?: boolean
-  onSave?: () => void
+  coordinates: Array<{ id: number; x: number; y: number; name: string }>;
+  averageOrders: number;
+  maxOperarios: number;
+  onAverageOrdersChange: (value: number) => void;
+  onMaxOperariosChange: (value: number) => void;
+  onRun: () => void;
+  isLoading: boolean;
+  showSaveOption?: boolean;
+  onSave?: () => void;
 }
 
 export function SimulationForm({
@@ -32,11 +38,15 @@ export function SimulationForm({
     <Card className="h-fit bg-gradient-to-br from-white to-blue-50 dark:from-slate-800 dark:to-slate-700 border border-blue-200 dark:border-slate-600 shadow-lg overflow-hidden">
       <CardHeader className="bg-gradient-to-r from-blue-500 to-cyan-500 border-b-0">
         <CardTitle className="text-white text-lg">Configuración</CardTitle>
-        <CardDescription className="text-blue-100">Parámetros de la simulación</CardDescription>
+        <CardDescription className="text-blue-100">
+          Parámetros de la simulación
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5 pt-6">
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">Cantidad Promedio de Pedidos</label>
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Cantidad Promedio de Pedidos
+          </label>
           <div className="relative">
             <Input
               type="number"
@@ -50,7 +60,9 @@ export function SimulationForm({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">Máximo de Operarios</label>
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Máximo de Operarios
+          </label>
           <div className="relative">
             <Input
               type="number"
@@ -68,13 +80,16 @@ export function SimulationForm({
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
             <label className="text-sm font-bold text-blue-900 dark:text-blue-300">
-              Productos: <span className="text-blue-600 dark:text-blue-400">{coordinates.length}</span>
+              Productos:{" "}
+              <span className="text-blue-600 dark:text-blue-400">
+                {coordinates.length}
+              </span>
             </label>
           </div>
           <p className="text-xs text-blue-700 dark:text-blue-400 ml-5">
             {coordinates.length === 0
-              ? '👆 Haz clic en el mapa para agregar'
-              : `✓ ${coordinates.length} producto${coordinates.length !== 1 ? 's' : ''} listo${coordinates.length !== 1 ? 's' : ''}`}
+              ? "👆 Haz clic en el mapa para agregar"
+              : `✓ ${coordinates.length} producto${coordinates.length !== 1 ? "s" : ""} listo${coordinates.length !== 1 ? "s" : ""}`}
           </p>
         </div>
 
@@ -85,7 +100,7 @@ export function SimulationForm({
             size="lg"
             className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-base shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save Mapping
+            Guardar
           </Button>
         ) : (
           <Button
@@ -100,11 +115,11 @@ export function SimulationForm({
                 Ejecutando...
               </div>
             ) : (
-              'Ejecutar Simulación'
+              "Ejecutar Simulación"
             )}
           </Button>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

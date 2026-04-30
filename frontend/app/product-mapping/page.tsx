@@ -86,7 +86,7 @@ export default function ProductMappingPage() {
     localStorage.removeItem("currentProductMapping");
 
     setHasSaved(true);
-    alert("Mapping saved successfully!");
+    alert("Distribucion cargada!");
     setCoordinates([]);
     setNextId(1);
   };
@@ -108,7 +108,7 @@ export default function ProductMappingPage() {
             onClick={handleSaveMapping}
             className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold gap-2"
           >
-            Save Mapping
+            Guardar
           </Button>
         )}
       </div>
@@ -121,7 +121,7 @@ export default function ProductMappingPage() {
             <CoordinateMap
               coordinates={coordinates}
               onAddCoordinate={(x, y) => {
-                const productName = `Product ${nextId}`;
+                const productName = `Producto ${nextId}`;
                 handleAddCoordinate(productName, x, y, 5.5);
               }}
               onRemoveCoordinate={handleRemoveCoordinate}

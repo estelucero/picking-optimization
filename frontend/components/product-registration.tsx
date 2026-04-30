@@ -32,7 +32,7 @@ export function ProductRegistration({
 
   const handleMapProduct = () => {
     if (!productName.trim()) {
-      alert("Please enter a product name");
+      alert("Por favor agrega el nombre de producto");
       return;
     }
 
@@ -120,7 +120,7 @@ export function ProductRegistration({
             className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold gap-2"
           >
             <Plus className="w-4 h-4" />
-            Map Product
+            Agregar Producto
           </Button>
         </CardContent>
       </Card>
@@ -179,7 +179,7 @@ export function ProductRegistration({
                         onClick={() => onDeleteProduct(coord.id)}
                         className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 mt-1"
                       >
-                        Remove
+                        Eliminar
                       </Button>
                     </div>
                   </div>

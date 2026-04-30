@@ -116,7 +116,7 @@ export default function ExperimentationPage() {
           <div className="lg:col-span-2">
             <div className="space-y-3">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                Available Product Mappings
+                Distribuciones disponibles
               </h2>
               {mappings.map((mapping) => (
                 <Card
@@ -137,11 +137,11 @@ export default function ExperimentationPage() {
                         {mapping.coordinates.length} products
                       </p>
                     </div>
-                    {selectedMapping?.id === mapping.id && (
+                    {/* {selectedMapping?.id === mapping.id && (
                       <div className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">
                         Selected
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </Card>
               ))}
@@ -149,7 +149,7 @@ export default function ExperimentationPage() {
 
             <Link href="/product-mapping" className="mt-6 block">
               <Button variant="outline" className="w-full gap-2">
-                + Create New Mapping
+                + Crear nueva distribucion
               </Button>
             </Link>
           </div>

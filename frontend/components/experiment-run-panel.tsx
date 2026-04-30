@@ -1,88 +1,104 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface Coordinate {
-  id: number
-  x: number
-  y: number
-  name: string
+  id: number;
+  x: number;
+  y: number;
+  name: string;
 }
 
 interface ExperimentRunPanelProps {
   selectedMapping?: {
-    id: string
-    name: string
-    coordinates: Coordinate[]
-  }
+    id: string;
+    name: string;
+    coordinates: Coordinate[];
+  };
 }
 
-export function ExperimentRunPanel({ selectedMapping }: ExperimentRunPanelProps) {
-  const router = useRouter()
-  const [averageOrders, setAverageOrders] = useState(50)
-  const [maxOperarios, setMaxOperarios] = useState(15)
-  const [isLoading, setIsLoading] = useState(false)
+export function ExperimentRunPanel({
+  selectedMapping,
+}: ExperimentRunPanelProps) {
+  const router = useRouter();
+  const [averageOrders, setAverageOrders] = useState(50);
+  const [maxOperarios, setMaxOperarios] = useState(15);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleRun = async () => {
     if (!selectedMapping?.coordinates.length) {
-      alert('Por favor selecciona un mapeo de productos primero')
-      return
+      alert("Por favor selecciona un mapeo de productos primero");
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const response = await fetch('/api/simulate', {
-        method: 'POST',
+      const response = await fetch("/api/simulate", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           coordinates: selectedMapping.coordinates,
           averageOrders: averageOrders,
           maxOperarios: maxOperarios,
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error('Error en la simulación')
+        throw new Error("Error en la simulación");
       }
 
-      const data = await response.json()
-      const resultsParam = btoa(JSON.stringify(data.results || []))
-      router.push(`/experimentation/results?data=${resultsParam}`)
+      const data = await response.json();
+      const resultsParam = btoa(JSON.stringify(data.results || []));
+      router.push(`/experimentation/results?data=${resultsParam}`);
     } catch (error) {
-      console.error('Error durante la simulación:', error)
-      alert('Error al ejecutar la simulación')
+      console.error("Error durante la simulación:", error);
+      alert("Error al ejecutar la simulación");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Card className="h-fit bg-gradient-to-br from-white to-blue-50 dark:from-slate-800 dark:to-slate-700 border border-blue-200 dark:border-slate-600 shadow-lg overflow-hidden">
       <CardHeader className="bg-gradient-to-r from-blue-500 to-cyan-500 border-b-0">
-        <CardTitle className="text-white text-lg">Experiment Configuration</CardTitle>
-        <CardDescription className="text-blue-100">Set parameters for your simulation</CardDescription>
+        <CardTitle className="text-white text-lg">
+          Configuracion de Experimento
+        </CardTitle>
+        <CardDescription className="text-blue-100">
+          Configrua las variables de la simulacion
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 pt-6">
         {/* Selected Mapping Info */}
         <div className="p-4 bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-slate-900 dark:to-slate-800 rounded-xl border border-blue-200 dark:border-slate-600">
-          <p className="text-sm font-bold text-blue-900 dark:text-blue-300 mb-2">Product Mapping</p>
+          <p className="text-sm font-bold text-blue-900 dark:text-blue-300 mb-2">
+            Distribucion
+          </p>
           <p className="text-lg font-bold text-blue-700 dark:text-blue-400">
-            {selectedMapping?.name || 'No mapping selected'}
+            {selectedMapping?.name || "No mapping selected"}
           </p>
           <p className="text-xs text-blue-600 dark:text-blue-500 mt-1">
-            {selectedMapping?.coordinates.length || 0} products
+            {selectedMapping?.coordinates.length || 0} productos
           </p>
         </div>
 
         {/* Average Orders */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">Average Orders per Day</label>
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Promedio por mes
+          </label>
           <Input
             type="number"
             min="1"
@@ -95,7 +111,9 @@ export function ExperimentRunPanel({ selectedMapping }: ExperimentRunPanelProps)
 
         {/* Maximum Operators */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">Maximum Operators</label>
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Maxima cantidad de operarios
+          </label>
           <Input
             type="number"
             min="1"
@@ -106,7 +124,8 @@ export function ExperimentRunPanel({ selectedMapping }: ExperimentRunPanelProps)
             className="w-full border-blue-200 dark:border-slate-600 focus:ring-blue-500 dark:bg-slate-900 dark:text-white"
           />
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Simulation will test from 1 to {maxOperarios} operators
+            La simulacion va a ejecutar experimentos de 1 a {maxOperarios}{" "}
+            operarios
           </p>
         </div>
 
@@ -123,10 +142,10 @@ export function ExperimentRunPanel({ selectedMapping }: ExperimentRunPanelProps)
               Running...
             </div>
           ) : (
-            'Run Experiment'
+            "Correr Experimento"
           )}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }
