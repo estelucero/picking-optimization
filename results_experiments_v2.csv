@@ -1,6 +1,0 @@
-caso,tiempo_minimo_min,tiempo_ejecucion_ms,cantidad_pedidos,cantidad_operarios,cantidad_viajes_total
-basico,6.833333333333333,0.0,4,2,2
-muchos_pedidos,58.66666666666667,13.856649398803711,20,3,27
-productos_pesados,10.933333333333334,1.6429424285888672,6,2,4
-operarios_diferentes,55.769444444444446,7.421016693115234,15,4,14
-distribucion_alejada,98.23333333333333,2.4988651275634766,7,2,2
