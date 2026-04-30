@@ -213,4 +213,4 @@ __marimo__/
 !.idea/runConfigurations/
 
 #Volumes    
-mongo/data
+mongo/data/
