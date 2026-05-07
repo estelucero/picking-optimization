@@ -6,19 +6,11 @@ import { ExperimentRunPanel } from "@/components/experiment-run-panel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowRight } from "lucide-react";
-
-interface Coordinate {
-  id: number;
-  x: number;
-  y: number;
-  name: string;
-}
-
-interface ProductMapping {
-  id: string;
-  name: string;
-  coordinates: Coordinate[];
-}
+import {
+  BackendUbicacionDocument,
+  ProductMapping,
+  fromBackendDocument,
+} from "@/lib/ubicaciones";
 
 export default function ExperimentationPage() {
   const [mappings, setMappings] = useState<ProductMapping[]>([]);
@@ -28,44 +20,29 @@ export default function ExperimentationPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Cargar mapeos guardados desde localStorage
-    const savedMappings = localStorage.getItem("productMappings");
-    if (savedMappings) {
-      const parsed = JSON.parse(savedMappings);
-      setMappings(parsed);
+    const loadMappings = async () => {
+      try {
+        const response = await fetch("/api/ubicaciones", { cache: "no-store" });
 
-      // Verificar si hay un mapping recientemente seleccionado
-      const currentMapping = localStorage.getItem("currentMapping");
-      if (currentMapping) {
-        try {
-          const coords = JSON.parse(currentMapping);
-          // Encontrar el mapping que contiene estas coordenadas
-          const matching = parsed.find(
-            (m: ProductMapping) =>
-              m.coordinates.length === coords.length &&
-              m.coordinates.every((c: Coordinate) =>
-                coords.some(
-                  (c2: Coordinate) =>
-                    c.id === c2.id && c.x === c2.x && c.y === c2.y,
-                ),
-              ),
-          );
-          if (matching) {
-            setSelectedMapping(matching);
-          } else if (parsed.length > 0) {
-            setSelectedMapping(parsed[0]);
-          }
-          localStorage.removeItem("currentMapping");
-        } catch (e) {
-          if (parsed.length > 0) {
-            setSelectedMapping(parsed[0]);
-          }
+        if (!response.ok) {
+          throw new Error("No se pudieron obtener las distribuciones");
         }
-      } else if (parsed.length > 0) {
-        setSelectedMapping(parsed[0]);
+
+        const documents: BackendUbicacionDocument[] = await response.json();
+        const parsedMappings = documents.map(fromBackendDocument);
+
+        setMappings(parsedMappings);
+        if (parsedMappings.length > 0) {
+          setSelectedMapping(parsedMappings[0]);
+        }
+      } catch (error) {
+        console.error("Error loading mappings:", error);
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+
+    loadMappings();
   }, []);
 
   return (

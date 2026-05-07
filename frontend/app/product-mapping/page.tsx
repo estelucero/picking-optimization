@@ -6,14 +6,7 @@ import { ProductRegistration } from "@/components/product-registration";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-
-interface Coordinate {
-  id: number;
-  x: number;
-  y: number;
-  name: string;
-  weight?: number;
-}
+import { Coordinate, toBackendPayload } from "@/lib/ubicaciones";
 
 export default function ProductMappingPage() {
   const [coordinates, setCoordinates] = useState<Coordinate[]>([]);
@@ -63,32 +56,39 @@ export default function ProductMappingPage() {
     setCoordinates((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const handleSaveMapping = () => {
+  const handleSaveMapping = async () => {
     if (coordinates.length === 0) {
       alert("Please add at least one product before saving");
       return;
     }
 
-    // Guardar como nuevo mapeo
-    const mappings = JSON.parse(
-      localStorage.getItem("productMappings") || "[]",
-    );
-    const timestamp = new Date().toLocaleString();
-    const newMapping = {
-      id: Date.now().toString(),
-      name: `Product Mapping - ${timestamp}`,
-      coordinates,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const timestamp = new Date().toLocaleString();
+      const mappingName = `Product Mapping - ${timestamp}`;
+      const payload = toBackendPayload(mappingName, coordinates);
 
-    mappings.push(newMapping);
-    localStorage.setItem("productMappings", JSON.stringify(mappings));
-    localStorage.removeItem("currentProductMapping");
+      const response = await fetch("/api/ubicaciones", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-    setHasSaved(true);
-    alert("Distribucion cargada!");
-    setCoordinates([]);
-    setNextId(1);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData?.detail || errorData?.error || "No se pudo guardar la distribucion");
+      }
+
+      localStorage.removeItem("currentProductMapping");
+      setHasSaved(true);
+      alert("Distribucion cargada!");
+      setCoordinates([]);
+      setNextId(1);
+    } catch (error) {
+      console.error("Error saving mapping:", error);
+      alert("Error al guardar la distribucion");
+    }
   };
 
   return (
