@@ -32,31 +32,36 @@ export function ExperimentRunPanel({
 }: ExperimentRunPanelProps) {
   const router = useRouter();
   const [averageOrders, setAverageOrders] = useState(50);
+  const [averageOrderSize, setAverageOrderSize] = useState(2);
+  const [iterations, setIterations] = useState(30);
   const [maxOperarios, setMaxOperarios] = useState(15);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRun = async () => {
-    if (!selectedMapping?.coordinates.length) {
+    if (!selectedMapping?.id || !selectedMapping?.coordinates.length) {
       alert("Por favor selecciona un mapeo de productos primero");
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch("/api/simulate", {
+      const response = await fetch("/api/experimentos/run", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          coordinates: selectedMapping.coordinates,
-          averageOrders: averageOrders,
-          maxOperarios: maxOperarios,
+          ubicacion_id: selectedMapping.id,
+          media_tamano_pedido: averageOrderSize,
+          media_pedidos_mes: averageOrders,
+          max_operarios: maxOperarios,
+          iteraciones: iterations,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Error en la simulación");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData?.detail || errorData?.error || "Error en la simulacion");
       }
 
       const data = await response.json();
@@ -97,7 +102,7 @@ export function ExperimentRunPanel({
         {/* Average Orders */}
         <div className="space-y-2">
           <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            Promedio por mes
+            Media de pedidos por mes
           </label>
           <Input
             type="number"
@@ -105,6 +110,34 @@ export function ExperimentRunPanel({
             value={averageOrders}
             onChange={(e) => setAverageOrders(Number(e.target.value))}
             placeholder="e.g., 50"
+            className="w-full border-blue-200 dark:border-slate-600 focus:ring-blue-500 dark:bg-slate-900 dark:text-white"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Media de tamano del pedido
+          </label>
+          <Input
+            type="number"
+            min="1"
+            value={averageOrderSize}
+            onChange={(e) => setAverageOrderSize(Number(e.target.value))}
+            placeholder="e.g., 2"
+            className="w-full border-blue-200 dark:border-slate-600 focus:ring-blue-500 dark:bg-slate-900 dark:text-white"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Cantidad de experimentos por n operarios
+          </label>
+          <Input
+            type="number"
+            min="1"
+            value={iterations}
+            onChange={(e) => setIterations(Number(e.target.value))}
+            placeholder="e.g., 30"
             className="w-full border-blue-200 dark:border-slate-600 focus:ring-blue-500 dark:bg-slate-900 dark:text-white"
           />
         </div>
@@ -124,8 +157,8 @@ export function ExperimentRunPanel({
             className="w-full border-blue-200 dark:border-slate-600 focus:ring-blue-500 dark:bg-slate-900 dark:text-white"
           />
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            La simulacion va a ejecutar experimentos de 1 a {maxOperarios}{" "}
-            operarios
+            Se evalua de 1 a {maxOperarios} operarios sobre los mismos escenarios
+            de pedidos por iteracion
           </p>
         </div>
 

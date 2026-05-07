@@ -1,7 +1,7 @@
 from core.infrastructure.Ubicaciones import Ubicaciones
 from core.algoritmos.Tsp import TSP
 from core.algoritmos.Modelo import Modelo
-from generadores import crear_productos_grid, crear_pedidos_desde_productos, crear_operarios_velocidades_distintas
+from .generadores import crear_productos_grid, crear_pedidos_desde_productos, crear_operarios_velocidades_distintas
 
 
 def experimento():

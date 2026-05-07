@@ -64,3 +64,13 @@ class UbicacionUpdate(UbicacionBase):
     pass
 
 
+class ExperimentoRunRequest(BaseModel):
+    ubicacion_id: str = Field(..., min_length=1)
+    media_tamano_pedido: float = Field(..., gt=0)
+    media_pedidos_mes: float = Field(..., gt=0)
+    max_operarios: int = Field(..., ge=1)
+    iteraciones: int = Field(..., ge=1)
+    beta_picking: float = Field(default=0.5, ge=0)
+    seed: int | None = None
+
+
