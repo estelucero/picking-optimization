@@ -35,6 +35,21 @@ export function ResultsContent() {
     router.push("/experimentation");
   };
 
+  const resultadoTiempoMinimo =
+    results.length > 0
+      ? results.reduce((minimo, actual) => {
+          if (actual.tiempo < minimo.tiempo) {
+            return actual;
+          }
+
+          if (actual.tiempo === minimo.tiempo) {
+            return actual.operarios < minimo.operarios ? actual : minimo;
+          }
+
+          return minimo;
+        }, results[0])
+      : null;
+
   return (
     <div className="p-8 space-y-8">
       <div className="flex justify-between items-start">
@@ -63,16 +78,15 @@ export function ResultsContent() {
               Tiempo minimo
             </p>
             <p className="text-4xl font-bold text-slate-900 dark:text-white mt-3">
-              {results.length}
+              {resultadoTiempoMinimo?.tiempo.toFixed(2) || "0.00"} min
             </p>
           </div>
           <div className="bg-white dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-2xl p-6 shadow-lg">
             <p className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
-              Rango de operarios
+              Operarios para tiempo minimo
             </p>
             <p className="text-4xl font-bold text-slate-900 dark:text-white mt-3">
-              {results[0]?.operarios || 0} -{" "}
-              {results[results.length - 1]?.operarios || 0}
+              {resultadoTiempoMinimo?.operarios || 0}
             </p>
           </div>
           <div className="bg-white dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-2xl p-6 shadow-lg">

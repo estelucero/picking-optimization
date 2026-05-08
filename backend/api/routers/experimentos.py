@@ -1,38 +1,79 @@
+from datetime import datetime, timezone
+
+from bson import ObjectId
+from bson.errors import InvalidId
 from fastapi import APIRouter, HTTPException
-from api.database import experimentos_collection
-from api.models import Experimento
+
+from api.database import experimentos_collection, ubicaciones_collection
+from api.models import ExperimentoRunRequest
 from api.services import ExperimentoService
 
 router = APIRouter(
     prefix="/experimentos",
-    tags=["Experimentos"]
+    tags=["Experimentos"],
 )
-@router.post("/")
-def create_user(experimento: Experimento):
-    experimento = ExperimentoService(tamaño_matriz=experimento.tamaño_matriz,
-                                     cantidad_pedidos=experimento.cantidad_pedidos,
-                                     cantidad_operarios=experimento.cantidad_max_operarios,
-                                     iteraciones=experimento.iteraciones)
 
-    result = experimento.promedio_experimentos()
-    print(result)
-    result = experimentos_collection.insert_one(experimento.model_dump())
-    return {"id": str(result.inserted_id)}
+
+def _to_object_id(value: str, detail: str) -> ObjectId:
+    try:
+        return ObjectId(value)
+    except InvalidId as exc:
+        raise HTTPException(status_code=400, detail=detail) from exc
+
+
+def _serialize_experimento(document: dict) -> dict:
+    document["id"] = str(document.pop("_id"))
+    if "ubicacion_id" in document and isinstance(document["ubicacion_id"], ObjectId):
+        document["ubicacion_id"] = str(document["ubicacion_id"])
+    return document
+
+
+@router.post("/run")
+def run_experimento(payload: ExperimentoRunRequest):
+    ubicacion_object_id = _to_object_id(payload.ubicacion_id, "Invalid ubicacion id")
+
+    ubicacion = ubicaciones_collection.find_one({"_id": ubicacion_object_id})
+    if not ubicacion:
+        raise HTTPException(status_code=404, detail="Ubicacion not found")
+
+    resultado = ExperimentoService.ejecutar_desde_ubicacion(ubicacion, payload)
+    now = datetime.now(timezone.utc)
+
+    documento_experimento = {
+        "ubicacion_id": ubicacion_object_id,
+        "parametros": payload.model_dump(),
+        "resultado": resultado,
+        "created_at": now,
+    }
+    inserted = experimentos_collection.insert_one(documento_experimento)
+
+    return {
+        "id": str(inserted.inserted_id),
+        "results": [
+            {
+                "operarios": item["operarios"],
+                "tiempo": item["tiempo"],
+            }
+            for item in resultado["resultados"]
+        ],
+        "resultado": resultado,
+    }
+
 
 @router.get("/")
-def get_users():
+def get_experimentos():
     experimentos = []
-    for experimento in experimentos_collection.find():
-        experimento["_id"] = str(experimento["_id"])
-        experimentos.append(experimento)
+    for experimento in experimentos_collection.find().sort("created_at", -1):
+        experimentos.append(_serialize_experimento(experimento))
     return experimentos
 
-@router.get("/{email}")
-def get_user(email: str):
-    experimento = experimentos_collection.find_one({"email": email})
+
+@router.get("/{experimento_id}")
+def get_experimento(experimento_id: str):
+    experimento_object_id = _to_object_id(experimento_id, "Invalid experimento id")
+    experimento = experimentos_collection.find_one({"_id": experimento_object_id})
 
     if not experimento:
-        raise HTTPException(404, "User not found")
+        raise HTTPException(status_code=404, detail="Experimento not found")
 
-    experimento["_id"] = str(experimento["_id"])
-    return experimento
+    return _serialize_experimento(experimento)
