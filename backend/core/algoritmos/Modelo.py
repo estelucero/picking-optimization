@@ -38,7 +38,7 @@ class Modelo(Heuristica):
                 producto, cantidad, operarios, beta_picking
             )
             # mejor_operario.agregar_tiempo(mejor_tiempo)
-            self._agregar_producto(mejor_operario, producto, cantidad, mejor_tiempo, distancia)
+            self._agregar_producto(mejor_operario, producto, cantidad, mejor_tiempo, distancia, secuencia)
     
         for op in operarios:
             #!A revisar
@@ -50,7 +50,7 @@ class Modelo(Heuristica):
 
         asignacion = {op: op.viajes for op in operarios}
 
-        return Resultado(tiempo_minimo=tiempo_minimo, asignacion=asignacion, secuencia=[])
+        return Resultado(tiempo_minimo=tiempo_minimo, asignacion=asignacion)
 
     def _desempaquetar_pedidos(self, pedidos: list[Pedido]) -> list[tuple[Producto, int]]:
         """Desempaqueta todos los pedidos en una lista de (producto, cantidad)."""
@@ -79,8 +79,10 @@ class Modelo(Heuristica):
             if tiempo_estimado + op.tiempo_acumulado < mejor_tiempo:
                 mejor_tiempo = tiempo_estimado + op.tiempo_acumulado
                 mejor_operario = op
+                mejor_distancia = distancia
+                mejor_secuencia = secuencia
 
-        return mejor_operario, mejor_tiempo, distancia, secuencia
+        return mejor_operario, mejor_tiempo, mejor_distancia, mejor_secuencia
 
     def _calcular_tiempo_estimado(
         self,
@@ -120,7 +122,8 @@ class Modelo(Heuristica):
         producto: Producto,
         cantidad: int,
         tiempo: float,
-        distancia: float
+        distancia: float,
+        secuencia : list[str]
     ) -> None:
         """Agrega un producto al carro del operario, cerrando viaje si está lleno."""
         carro_lleno = not (operario.puedo_agregar(producto, cantidad))
@@ -128,9 +131,9 @@ class Modelo(Heuristica):
         if carro_lleno:
             operario.cerrar_viaje()
             #se vacia el carro lleno y se agrega el producto a un nuevo carro
-            operario.agregar_producto(producto, cantidad, tiempo, distancia)
+            operario.agregar_producto(producto, cantidad, tiempo, distancia, secuencia)
         else:
-            operario.agregar_producto(producto, cantidad, tiempo, distancia)
+            operario.agregar_producto(producto, cantidad, tiempo, distancia, secuencia)
 
     def _validar_parametros(
         self,

@@ -15,6 +15,7 @@ class Viaje(BaseModel):
     distancia: float = Field(..., ge=0)
     tiempo: float = Field(..., ge=0)
     secuencia: list[tuple[Producto,int]]
+    camino_minimo: list[tuple[Producto,int]]
     
 
     # Configuración de Pydantic
@@ -33,10 +34,24 @@ class Viaje(BaseModel):
     def valor_distancia(self) -> float:
         return self.distancia
     
-    def actualizar_viaje(self, paso: tuple[Producto,int], tiempo_nuevo: float, distancia_nueva: float) -> None:
+    def actualizar_viaje(self, paso: tuple[Producto,int], tiempo_nuevo: float, distancia_nueva: float, camino_minimo:list[str]) -> None:
         self.distancia = distancia_nueva
         self.tiempo = tiempo_nuevo
         self.secuencia.append(paso)
+        self.actualizar_camino_minimo(camino_minimo)
+    
+    def actualizar_camino_minimo(self, nuevo_camino: list[str]) -> None:
+        
+        nuevo_camino_minimo: list[tuple[Producto,int]] = []
+
+        for producto_camino in nuevo_camino:
+            for producto, cantidad in self.secuencia:
+                if(producto_camino == producto.codigo):
+                    nuevo_camino_minimo.append((producto,cantidad))
+
+        self.camino_minimo = nuevo_camino_minimo
+
+        return
 
     def getPesoTotal(self):
         sumaPesos = 0
@@ -45,4 +60,4 @@ class Viaje(BaseModel):
         return sumaPesos
 
     def __repr__(self) -> str:
-        return f"Viaje(distancia={self.distancia}m, tiempo={self.tiempo} min), pesoTotal= {self.getPesoTotal()},\n secuencia={self.secuencia})) \n"
+        return f"Viaje(distancia={self.distancia}m, tiempo={self.tiempo} min), pesoTotal= {self.getPesoTotal()},\n secuencia={self.secuencia})) \n camino minimo={self.camino_minimo}"
