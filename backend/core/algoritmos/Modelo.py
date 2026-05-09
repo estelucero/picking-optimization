@@ -50,7 +50,7 @@ class Modelo(Heuristica):
 
         asignacion = {op: op.viajes for op in operarios}
 
-        return Resultado(tiempo_minimo=tiempo_minimo, asignacion=asignacion, secuencia=[])
+        return Resultado(tiempo_minimo=tiempo_minimo, asignacion=asignacion)
 
     def _desempaquetar_pedidos(self, pedidos: list[Pedido]) -> list[tuple[Producto, int]]:
         """Desempaqueta todos los pedidos en una lista de (producto, cantidad)."""
