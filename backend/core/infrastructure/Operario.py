@@ -23,7 +23,7 @@ class Operario(BaseModel):
     velocidad: Velocidad
     carro: Carro
     viajes: List[Viaje] = Field(default_factory=list) 
-    viaje_actual: Viaje = Viaje(distancia=0, tiempo=0, secuencia=[])
+    viaje_actual: Viaje = Viaje(distancia=0, tiempo=0, secuencia=[], camino_minimo=[])
     tiempo_acumulado: float = 0
 
     @field_validator('codigo', 'nombre', mode='before')
@@ -36,7 +36,7 @@ class Operario(BaseModel):
             raise ValueError(f"El tiempo debe ser no negativo, se recibió: {tiempo}")
         self.tiempo_acumulado += tiempo
 
-    def agregar_producto(self, producto: Producto, cantidad: int, tiempo_nuevo:float, distancia_nueva: float) -> bool:
+    def agregar_producto(self, producto: Producto, cantidad: int, tiempo_nuevo:float, distancia_nueva: float, camino_minimo:list[str]) -> bool:
         """
         Agrega un producto al carro.
         Retorna True si el carro estaba lleno y se debe cerrar el viaje.
@@ -45,7 +45,7 @@ class Operario(BaseModel):
             raise ValueError(f"La cantidad debe ser mayor a 0, se recibió: {cantidad}")
 
         self.carro.agregar_producto(producto, cantidad)
-        self.viaje_actual.actualizar_viaje((producto,cantidad), tiempo_nuevo, distancia_nueva)
+        self.viaje_actual.actualizar_viaje((producto,cantidad), tiempo_nuevo, distancia_nueva, camino_minimo)
 
         return True
     
@@ -57,7 +57,7 @@ class Operario(BaseModel):
 
         self.viajes.append(self.viaje_actual)
         self.agregar_tiempo(self.viaje_actual.tiempo)
-        self.viaje_actual = Viaje(distancia=0, tiempo=0, secuencia=[])
+        self.viaje_actual = Viaje(distancia=0, tiempo=0, secuencia=[], camino_minimo=[])
         self.carro.vaciar()
         
 

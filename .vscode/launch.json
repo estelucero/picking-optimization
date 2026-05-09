@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug caso_2_muchos_pedidos",
+      "type": "python",
+      "request": "launch",
+      "module": "core.experiments.caso_2_muchos_pedidos",
+      "cwd": "${workspaceFolder}/backend",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}
