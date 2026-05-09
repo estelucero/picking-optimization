@@ -71,3 +71,11 @@ Gráficos comparativos entre experimentos: histogramas, box plots, y curvas de t
 ## deploy api
 
 uvicorn mainApi:app --reload
+
+## Run experiments
+
+Para correr experimentos de python dentro de /backend/core/experiments/, se puede correr el comando desde el directorio backend/
+
+```bash 
+python -m core.experiments.caso
+```
