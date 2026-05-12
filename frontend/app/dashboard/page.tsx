@@ -1,13 +1,6 @@
-import { LayoutGrid, Package, TrendingUp, Clock } from "lucide-react";
+import { Package, TrendingUp, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-
-interface MetricProps {
-  label: string;
-  value: string;
-  icon: React.ComponentType<any>;
-  subtitle?: string;
-}
 
 export default function Dashboard() {
   return (
@@ -37,12 +30,11 @@ export default function Dashboard() {
               Inicio rapido
             </h2>
             <p className="text-slate-600 dark:text-slate-400">
-              Empieza a crear nuevos experimentos para optimizar la creación de
-              pedidos.
+              Revisa los experimentos corridos, abre un run y compara asignaciones.
             </p>
-            <Link href="/experimentation">
+            <Link href="/experiments">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                Optimiza Ya
+                Ver experimentos
               </Button>
             </Link>
           </div>
@@ -60,20 +52,13 @@ export default function Dashboard() {
               CONFIGURACIÓN
             </p>
             <h3 className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2">
-              Crea los diferentes Depositos
+              Analiza el historial de corridas
             </h3>
           </div>
           <div className="flex items-center gap-6">
-            {/* <div>
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
-                Efficiency Gain
-              </p>
-              <p className="text-2xl font-bold text-green-600 mt-1">+12.4%</p>
-              <div className="h-1 bg-blue-600 rounded-full mt-2 w-24"></div>
-            </div> */}
-            <Link href="/product-mapping">
+            <Link href="/experiments">
               <Button className="bg-blue-600 hover:bg-blue-700">
-                Crear Distribuciones
+                Abrir historial
               </Button>
             </Link>
           </div>

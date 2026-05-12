@@ -11,9 +11,18 @@ interface SimulationResult {
 interface SimulationChartProps {
   data: SimulationResult[]
   isLoading: boolean
+  xAxisLabel?: string
+  yAxisLabel?: string
+  barName?: string
 }
 
-export function SimulationChart({ data, isLoading }: SimulationChartProps) {
+export function SimulationChart({
+  data,
+  isLoading,
+  xAxisLabel = 'Cantidad de Operarios',
+  yAxisLabel = 'Tiempo (minutos)',
+  barName = 'Tiempo de Ejecución',
+}: SimulationChartProps) {
   return (
     <div className="w-full">
       {isLoading ? (
@@ -29,15 +38,15 @@ export function SimulationChart({ data, isLoading }: SimulationChartProps) {
       ) : (
         <ResponsiveContainer width="100%" height={400}>
           <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#bfdbfe" dark="#334155" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#bfdbfe" />
             <XAxis 
               dataKey="operarios" 
-              label={{ value: 'Cantidad de Operarios', position: 'insideBottom', offset: -10 }}
+              label={{ value: xAxisLabel, position: 'insideBottom', offset: -10 }}
               tick={{ fill: '#0d1b3b' }}
               stroke="#bfdbfe"
             />
             <YAxis 
-              label={{ value: 'Tiempo (minutos)', angle: -90, position: 'insideLeft' }}
+              label={{ value: yAxisLabel, angle: -90, position: 'insideLeft' }}
               tick={{ fill: '#0d1b3b' }}
               stroke="#bfdbfe"
             />
@@ -59,7 +68,7 @@ export function SimulationChart({ data, isLoading }: SimulationChartProps) {
             <Bar 
               dataKey="tiempo" 
               fill="#3b82f6" 
-              name="Tiempo de Ejecución"
+              name={barName}
               radius={[8, 8, 0, 0]}
               animationDuration={800}
             />
