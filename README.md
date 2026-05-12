@@ -70,7 +70,13 @@ Gráficos comparativos entre experimentos: histogramas, box plots, y curvas de t
 
 ## deploy api
 
+ubicarse en el working directory: `picking-optimization\backend`
+
+y ejecutar
+
+````bash
 uvicorn mainApi:app --reload
+````
 
 ## Run experiments
 
@@ -79,3 +85,9 @@ Para correr experimentos de python dentro de /backend/core/experiments/, se pued
 ```bash 
 python -m core.experiments.caso
 ```
+
+## Deploy docker
+
+````commandline
+docker compose up -d
+````

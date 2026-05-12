@@ -73,4 +73,41 @@ class ExperimentoRunRequest(BaseModel):
     beta_picking: float = Field(default=0.5, ge=0)
     seed: int | None = None
 
+class ExperimentoPreview(BaseModel):
+    nombre: str = Field(..., min_length=1)
+    fecha: datetime
+    layout: str = Field(..., min_length=1)
+    max_operarios: int = Field(..., ge=1)
+    runs: str = Field(..., min_length=1)
+    estado: str = Field(..., min_length=1)
 
+#runs_previews
+class RunPreview(BaseModel):
+    experimento_id: str = Field(..., min_length=1)
+    nombre: str = Field(..., min_length=1)
+    tiempo: float = Field(..., gt=0)
+    distancia: float = Field(..., gt=0)
+    pedidos: int = Field(..., gt=0)
+    operarios: int = Field(..., ge=1)
+
+class Pedido(BaseModel):
+    nombre: str = Field(..., min_length=1)
+    cliente: str = Field(..., min_length=1)
+    items: [str] = Field(..., min_length=1)
+    operario: str = Field(..., min_length=1)
+
+class Metrica(BaseModel):
+    nombre: str = Field(..., min_length=1)
+    valor: float = Field(..., gt=0)
+
+class Operario(BaseModel):
+    nombre: str = Field(..., min_length=1)
+    tiempo: float = Field(..., gt=0)
+    distancia: float = Field(..., gt=0)
+    ruta: str = Field(..., min_length=1)
+
+class Run(BaseModel):
+    run_preview_id: str = Field(..., min_length=1)
+    pedidos: [Pedido] = Field(..., min_length=1)
+    metricas: [Metrica] = Field(..., min_length=1)
+    opearios: [Operario] = Field(..., min_length=1)
