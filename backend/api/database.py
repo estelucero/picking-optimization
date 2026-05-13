@@ -9,4 +9,7 @@ db = client["mydatabase"]
 
 users_collection = db["users"]
 experimentos_collection = db["experimentos"]
+experimento_preview_collection = db["experimento_previews"]
+run_preview_collection = db["run_previews"]
+run_collection = db["runs"]
 ubicaciones_collection = db["ubicaciones"]

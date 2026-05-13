@@ -78,7 +78,7 @@ class ExperimentoPreview(BaseModel):
     fecha: datetime
     layout: str = Field(..., min_length=1)
     max_operarios: int = Field(..., ge=1)
-    runs: str = Field(..., min_length=1)
+    runs: int = Field(..., ge=1)
     estado: str = Field(..., min_length=1)
 
 #runs_previews
@@ -93,7 +93,7 @@ class RunPreview(BaseModel):
 class Pedido(BaseModel):
     nombre: str = Field(..., min_length=1)
     cliente: str = Field(..., min_length=1)
-    items: [str] = Field(..., min_length=1)
+    items: list[str] = Field(..., min_length=1)
     operario: str = Field(..., min_length=1)
 
 class Metrica(BaseModel):
@@ -108,6 +108,6 @@ class Operario(BaseModel):
 
 class Run(BaseModel):
     run_preview_id: str = Field(..., min_length=1)
-    pedidos: [Pedido] = Field(..., min_length=1)
-    metricas: [Metrica] = Field(..., min_length=1)
-    opearios: [Operario] = Field(..., min_length=1)
+    pedidos: list[Pedido] = Field(..., min_length=1)
+    metricas: list[Metrica] = Field(..., min_length=1)
+    opearios: list[Operario] = Field(..., min_length=1)
