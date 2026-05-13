@@ -107,8 +107,7 @@ class Experimentos:
 
                 pedido_model =PedidoModel(codigo=pedido.codigo,
                                               cliente=pedido.cliente,
-                                              items= producto_models,
-                                              operario="")
+                                              items= producto_models)
                 pedido_models.append(pedido_model)
 
 
@@ -126,13 +125,14 @@ class Experimentos:
                 #Genero Run preview y Run
 
                 #calculo distancia total
-                distancia_total = 0
+                distancia_total = 0.0
                 operario_models: list[OperarioModel] = []
 
                 for operario, viajes in resultado.asignacion.items():
 
                     for viaje in viajes:
-                        distancia_total =+ viaje.distancia
+                        #TODO: por alguna razon 'viaje.distancia' lo guarda como UnidadDistancia en vez de float
+                        distancia_total =  distancia_total + viaje.distancia.metros
 
                         ruta: list[ProductoModel] = []
 
@@ -146,7 +146,7 @@ class Experimentos:
 
                         operario_models.append(OperarioModel(nombre=operario.nombre,
                                       tiempo=viaje.tiempo,
-                                      distancia=viaje.distancia,
+                                      distancia=viaje.distancia.metros,
                                       ruta=ruta))
 
 

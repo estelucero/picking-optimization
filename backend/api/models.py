@@ -102,7 +102,6 @@ class PedidoModel(BaseModel):
     codigo: str = Field(..., min_length=1)
     cliente: str = Field(..., min_length=1)
     items: list[ProductoModel] = Field(..., min_length=1)
-    operario: str = Field(..., min_length=1)
 
 class Metrica(BaseModel):
     nombre: str = Field(..., min_length=1)

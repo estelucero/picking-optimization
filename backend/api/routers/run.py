@@ -25,7 +25,7 @@ def get_runs(run_preview_id: str | None = None):
         filtros["run_preview_id"] = ObjectId(run_preview_id)
 
     runs = []
-    for run in run_collection.find():
+    for run in run_collection.find(filtros):
         run["_id"] = str(run["_id"])
         run["run_preview_id"] = str(run["run_preview_id"])
         runs.append(run)
