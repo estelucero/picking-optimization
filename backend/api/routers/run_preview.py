@@ -20,11 +20,14 @@ def create_run_preview(run_preview: RunPreview):
     return {"id": str(result.inserted_id)}
 
 @router.get("/")
-def get_run_previews(experimento_preview_id: str | None = None):
+def get_run_previews(experimento_preview_id: str | None = None,
+                     operarios: int | None = None):
     filtros = {}
 
     if experimento_preview_id is not None:
         filtros["experimento_preview_id"] = ObjectId(experimento_preview_id)
+    if operarios is not None:
+        filtros["operarios"] = operarios
 
     runpreviews = []
     for run_preview in run_preview_collection.find(filtros):

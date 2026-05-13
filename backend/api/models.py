@@ -108,7 +108,7 @@ class Metrica(BaseModel):
     nombre: str = Field(..., min_length=1)
     valor: float = Field(..., gt=0)
 
-class Operario(BaseModel):
+class OperarioModel(BaseModel):
     nombre: str = Field(..., min_length=1)
     tiempo: float = Field(..., gt=0)
     distancia: float = Field(..., gt=0)
@@ -118,4 +118,4 @@ class Run(BaseModel):
     run_preview_id: str = Field(..., min_length=1)
     pedidos: list[PedidoModel] = Field(..., min_length=1)
     metricas: list[Metrica] = Field(..., min_length=1)
-    opearios: list[Operario] = Field(..., min_length=1)
+    opearios: list[OperarioModel] = Field(..., min_length=1)

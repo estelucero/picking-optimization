@@ -3,8 +3,9 @@ from datetime import datetime
 import numpy as np
 from pydantic import BaseModel, Field
 
-from api.models import ExperimentoPreview
+from api.models import ExperimentoPreview, Metrica
 from api.routers.experimento_preview import create_experimento_preview
+from api.routers.run import create_run
 from api.routers.run_preview import create_run_preview
 from core.algoritmos.Modelo import Modelo
 from core.algoritmos.Tsp import TSP
@@ -14,7 +15,7 @@ from core.infrastructure.Pedido import Pedido
 from core.infrastructure.Producto import Producto
 from core.infrastructure.Ubicaciones import Ubicaciones
 from core.utils.Velocidad import Velocidad
-from api.models import PedidoModel, ProductoModel, RunPreview, Run
+from api.models import PedidoModel, ProductoModel, RunPreview, Run, OperarioModel
 
 
 class ConfiguracionExperimento(BaseModel):
@@ -126,9 +127,29 @@ class Experimentos:
 
                 #calculo distancia total
                 distancia_total = 0
+                operario_models: list[OperarioModel] = []
+
                 for operario, viajes in resultado.asignacion.items():
+
                     for viaje in viajes:
                         distancia_total =+ viaje.distancia
+
+                        ruta: list[ProductoModel] = []
+
+                        for producto, cantidad in viaje.camino_minimo:
+                            ruta.append(ProductoModel(codigo=producto.codigo,
+                                                      nombre=producto.nombre,
+                                                      peso=producto.peso,
+                                                      x=producto.x,
+                                                      y=producto.y,
+                                                      cantidad=cantidad))
+
+                        operario_models.append(OperarioModel(nombre=operario.nombre,
+                                      tiempo=viaje.tiempo,
+                                      distancia=viaje.distancia,
+                                      ruta=ruta))
+
+
 
                 run_preview = RunPreview(experimento_preview_id=created_experimento_preview["id"],
                                          nombre="Pendiente",
@@ -138,12 +159,20 @@ class Experimentos:
                                          operarios=cantidad_operarios)
                 created_run_preview = create_run_preview(run_preview)
 
-                
+                metricas: list[Metrica] = []
+                metricas.append(Metrica(nombre="Tiempo total", valor=resultado.tiempo_minimo))
+                metricas.append(Metrica(nombre="Pedidos", valor=len(pedidos)))
+                metricas.append(Metrica(nombre="Distancia total", valor=distancia_total))
+                metricas.append(Metrica(nombre="Operarios", valor=cantidad_operarios))
+
+
+
                 run = Run(run_preview_id=created_run_preview["id"],
                           pedidos=pedido_models,
-                          metricas="",
-                          opearios="")
+                          metricas=metricas,
+                          opearios=operario_models)
 
+                created_run = create_run(run)
 
         resultados = []
         for cantidad_operarios, muestras in tiempos_por_operario.items():
