@@ -90,10 +90,18 @@ class RunPreview(BaseModel):
     pedidos: int = Field(..., gt=0)
     operarios: int = Field(..., ge=1)
 
-class Pedido(BaseModel):
-    nombre: str = Field(..., min_length=1)
+class ProductoModel(BaseModel):
+    codigo: str = Field(..., min_length=1, description="Identificador único del producto")
+    nombre: str = Field(..., min_length=1, description="Nombre descriptivo del producto")
+    peso: float = Field(..., gt=0, description="Peso en kilogramos (> 0)")
+    x: float = Field(..., description="Coordenada X en el depósito")
+    y: float = Field(..., description="Coordenada Y en el depósito")
+    cantidad: int = Field(..., ge=1)
+
+class PedidoModel(BaseModel):
+    codigo: str = Field(..., min_length=1)
     cliente: str = Field(..., min_length=1)
-    items: list[str] = Field(..., min_length=1)
+    items: list[ProductoModel] = Field(..., min_length=1)
     operario: str = Field(..., min_length=1)
 
 class Metrica(BaseModel):
@@ -104,10 +112,10 @@ class Operario(BaseModel):
     nombre: str = Field(..., min_length=1)
     tiempo: float = Field(..., gt=0)
     distancia: float = Field(..., gt=0)
-    ruta: str = Field(..., min_length=1)
+    ruta: list[ProductoModel] = Field(..., min_length=1)
 
 class Run(BaseModel):
     run_preview_id: str = Field(..., min_length=1)
-    pedidos: list[Pedido] = Field(..., min_length=1)
+    pedidos: list[PedidoModel] = Field(..., min_length=1)
     metricas: list[Metrica] = Field(..., min_length=1)
     opearios: list[Operario] = Field(..., min_length=1)
