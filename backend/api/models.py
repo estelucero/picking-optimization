@@ -83,7 +83,7 @@ class ExperimentoPreview(BaseModel):
 
 #runs_previews
 class RunPreview(BaseModel):
-    experimento_id: str = Field(..., min_length=1)
+    experimento_preview_id: str = Field(..., min_length=1)
     nombre: str = Field(..., min_length=1)
     tiempo: float = Field(..., gt=0)
     distancia: float = Field(..., gt=0)
