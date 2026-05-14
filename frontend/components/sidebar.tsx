@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, MapPin, Zap } from "lucide-react";
+import { History, LayoutGrid, MapPin, PlayCircle } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -19,9 +19,14 @@ export function Sidebar() {
       icon: MapPin,
     },
     {
+      href: "/experiments",
+      label: "Historial",
+      icon: History,
+    },
+    {
       href: "/experimentation",
-      label: "Experimentos",
-      icon: Zap,
+      label: "Simular",
+      icon: PlayCircle,
     },
   ];
 
