@@ -18,6 +18,7 @@ class Producto(BaseModel):
     peso: float = Field(..., gt=0, description="Peso en kilogramos (> 0)")
     x: float = Field(..., description="Coordenada X en el depósito")
     y: float = Field(..., description="Coordenada Y en el depósito")
+    codigo_pedido: str = Field(default="", description="Codigo del pedido al que pertenece")
 
     model_config = ConfigDict(frozen=True) 
         

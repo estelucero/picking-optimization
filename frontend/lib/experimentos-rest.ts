@@ -25,6 +25,7 @@ export interface BackendPedidoItem {
   x: number;
   y: number;
   cantidad: number;
+  codigo_pedido: string;
 }
 
 export interface BackendPedido {
@@ -40,6 +41,7 @@ export interface BackendOperarioRutaItem {
   x: number;
   y: number;
   cantidad?: number;
+  codigo_pedido: string;
 }
 
 export interface BackendOperario {
@@ -104,7 +106,9 @@ export interface ExperimentDetail extends ExperimentSummary {
   operatorGroups: ExperimentOperatorGroup[];
 }
 
-function groupRunPreviewsByExperiment(runPreviews: BackendRunPreview[]): Map<string, BackendRunPreview[]> {
+function groupRunPreviewsByExperiment(
+  runPreviews: BackendRunPreview[],
+): Map<string, BackendRunPreview[]> {
   return runPreviews.reduce((acc, runPreview) => {
     const current = acc.get(runPreview.experimento_preview_id) ?? [];
     current.push(runPreview);
@@ -140,7 +144,9 @@ export function buildExperimentSummaries(
   return previews.map((preview) => {
     const runs = groupedRunPreviews.get(preview.id) ?? [];
     const times = runs.map((run) => run.tiempo);
-    const operatorCounts = Array.from(new Set(runs.map((run) => run.operarios))).sort((a, b) => a - b);
+    const operatorCounts = Array.from(
+      new Set(runs.map((run) => run.operarios)),
+    ).sort((a, b) => a - b);
 
     return {
       id: preview.id,
@@ -152,7 +158,10 @@ export function buildExperimentSummaries(
       maxOperators: preview.max_operarios,
       totalRuns: runs.length,
       bestTime: times.length > 0 ? Math.min(...times) : 0,
-      averageTime: times.length > 0 ? times.reduce((acc, time) => acc + time, 0) / times.length : 0,
+      averageTime:
+        times.length > 0
+          ? times.reduce((acc, time) => acc + time, 0) / times.length
+          : 0,
       operatorCounts,
     };
   });
@@ -162,7 +171,9 @@ export function buildExperimentDetail(
   preview: BackendExperimentoPreview,
   runPreviews: BackendRunPreview[],
 ): ExperimentDetail {
-  const operatorGroups = Array.from(new Set(runPreviews.map((run) => run.operarios)))
+  const operatorGroups = Array.from(
+    new Set(runPreviews.map((run) => run.operarios)),
+  )
     .sort((a, b) => a - b)
     .map((operatorCount) => ({
       operatorCount,
@@ -181,9 +192,12 @@ export function buildExperimentDetail(
     }));
 
   const allRuns = operatorGroups.flatMap((group) => group.runs);
-  const bestTime = allRuns.length > 0 ? Math.min(...allRuns.map((run) => run.totalTime)) : 0;
+  const bestTime =
+    allRuns.length > 0 ? Math.min(...allRuns.map((run) => run.totalTime)) : 0;
   const averageTime =
-    allRuns.length > 0 ? allRuns.reduce((acc, run) => acc + run.totalTime, 0) / allRuns.length : 0;
+    allRuns.length > 0
+      ? allRuns.reduce((acc, run) => acc + run.totalTime, 0) / allRuns.length
+      : 0;
 
   return {
     id: preview.id,
@@ -202,7 +216,9 @@ export function buildExperimentDetail(
 }
 
 export function buildRunDetail(run: BackendRunDocument): ExperimentRun {
-  const firstMetric = run.metricas.find((metric) => metric.nombre === "Tiempo total");
+  const firstMetric = run.metricas.find(
+    (metric) => metric.nombre === "Tiempo total",
+  );
 
   return {
     id: run.id,
@@ -210,8 +226,12 @@ export function buildRunDetail(run: BackendRunDocument): ExperimentRun {
     label: firstMetric ? "Run" : "Run",
     operatorCount: run.operarios.length,
     totalTime: firstMetric?.valor ?? 0,
-    totalDistance: run.metricas.find((metric) => metric.nombre === "Distancia total")?.valor ?? 0,
-    ordersCount: run.metricas.find((metric) => metric.nombre === "Pedidos")?.valor ?? run.pedidos.length,
+    totalDistance:
+      run.metricas.find((metric) => metric.nombre === "Distancia total")
+        ?.valor ?? 0,
+    ordersCount:
+      run.metricas.find((metric) => metric.nombre === "Pedidos")?.valor ??
+      run.pedidos.length,
     assignments: run.operarios.map(buildAssignment),
   };
 }

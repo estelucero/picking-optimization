@@ -102,7 +102,8 @@ class Experimentos:
                                                          peso=producto.peso,
                                                          x=producto.x,
                                                          y=producto.y,
-                                                         cantidad=cantidad)
+                                                         cantidad=cantidad,
+                                                         codigo_pedido=producto.codigo_pedido)
                                            )
 
                 pedido_model =PedidoModel(codigo=pedido.codigo,
@@ -142,7 +143,8 @@ class Experimentos:
                                                       peso=producto.peso,
                                                       x=producto.x,
                                                       y=producto.y,
-                                                      cantidad=cantidad))
+                                                      cantidad=cantidad,
+                                                      codigo_pedido=producto.codigo_pedido))
 
                         operario_models.append(OperarioModel(nombre=operario.nombre,
                                       tiempo=viaje.tiempo,
@@ -216,12 +218,29 @@ class Experimentos:
             )
             indices_lista = np.atleast_1d(indices).tolist()
 
-            productos_del_pedido = [self._productos_sin_deposito[i] for i in indices_lista]
+            codigo_pedido=f"PED-{indice_iteracion + 1:03d}-{indice_pedido + 1:04d}"
+
+
+            productos_del_pedido = []
+
+            for i in indices_lista:
+                base = self._productos_sin_deposito[i]
+                productos_del_pedido.append(
+                    Producto(
+                        codigo=base.codigo,
+                        nombre=base.nombre,
+                        peso=base.peso,
+                        x=base.x,
+                        y=base.y,
+                        codigo_pedido=codigo_pedido,
+                    )
+                )
+
             items = {producto: 1 for producto in productos_del_pedido}
 
             pedidos.append(
                 Pedido(
-                    codigo=f"PED-{indice_iteracion + 1:03d}-{indice_pedido + 1:04d}",
+                    codigo=codigo_pedido,
                     cliente=f"Cliente {indice_iteracion + 1}-{indice_pedido + 1}",
                     items=items,
                 )
