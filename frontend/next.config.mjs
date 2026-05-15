@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+
+  productionBrowserSourceMaps: true,
+
   typescript: {
     ignoreBuildErrors: true,
   },
