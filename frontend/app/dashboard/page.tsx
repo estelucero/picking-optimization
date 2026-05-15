@@ -61,6 +61,11 @@ export default function Dashboard() {
                 Abrir historial
               </Button>
             </Link>
+            <Link href="/distributions">
+              <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50">
+                Ver distribuciones
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

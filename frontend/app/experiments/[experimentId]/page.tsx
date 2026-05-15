@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, ChevronRight, Search } from "lucide-react";
 
@@ -10,7 +10,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SimulationChart } from "@/components/simulation-chart";
-import { getExperimentById, formatExperimentDate, formatExperimentTime, type ExperimentRun } from "@/lib/experimentos";
+import {
+  buildExperimentDetail,
+  formatExperimentDate,
+  formatExperimentTime,
+  type BackendExperimentoPreview,
+  type BackendRunPreview,
+  type ExperimentDetail,
+  type ExperimentRun,
+} from "@/lib/experimentos-rest";
 
 function getBestRun(runs: ExperimentRun[]): ExperimentRun {
   return runs.reduce((best, run) => (run.totalTime < best.totalTime ? run : best), runs[0]);
@@ -25,41 +33,106 @@ export default function ExperimentDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const experiment = getExperimentById(params.experimentId);
-  const selectedOperatorCount = Number(searchParams.get("operators") || experiment?.operatorCounts[0] || 1);
-  const selectedGroup = experiment?.operatorGroups.find((group) => group.operatorCount === selectedOperatorCount) || experiment?.operatorGroups[0];
+  const [experiment, setExperiment] = useState<ExperimentDetail | null>(null);
   const [runQuery, setRunQuery] = useState("");
   const [runSort, setRunSort] = useState("time-asc");
-  const selectedRuns = selectedGroup?.runs ?? [];
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadExperiment() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const [experimentsResponse, runPreviewsResponse] = await Promise.all([
+          fetch("/api/experimento_preview", { cache: "no-store" }),
+          fetch(`/api/run_preview?experimento_preview_id=${params.experimentId}`, { cache: "no-store" }),
+        ]);
+
+        if (!experimentsResponse.ok) {
+          throw new Error("No se pudo obtener el experimento");
+        }
+
+        if (!runPreviewsResponse.ok) {
+          throw new Error("No se pudieron obtener los run previews");
+        }
+
+        const previews = (await experimentsResponse.json()) as BackendExperimentoPreview[];
+        const preview = previews.find((item) => item.id === params.experimentId);
+        const runPreviews = (await runPreviewsResponse.json()) as BackendRunPreview[];
+
+        if (!preview) {
+          throw new Error("No se encontro el experimento");
+        }
+
+        if (!cancelled) {
+          setExperiment(buildExperimentDetail(preview, runPreviews));
+        }
+      } catch (loadError) {
+        console.error("Error loading experiment detail:", loadError);
+        if (!cancelled) {
+          setError("No se pudo cargar el detalle del experimento");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadExperiment();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [params.experimentId]);
+
+  const fallbackOperatorCount = experiment?.operatorCounts[0] || 1;
+  const selectedOperatorCount = Number(searchParams.get("operators") || fallbackOperatorCount);
+  const resolvedOperatorCount = Number.isFinite(selectedOperatorCount) ? selectedOperatorCount : fallbackOperatorCount;
+  const selectedGroup = experiment?.operatorGroups.find((group) => group.operatorCount === resolvedOperatorCount) || experiment?.operatorGroups[0];
 
   const chartData = useMemo(
     () =>
       experiment?.operatorGroups.map((group) => ({
         operarios: group.operatorCount,
-        tiempo: Number(
-          (group.runs.reduce((acc, run) => acc + run.totalTime, 0) / group.runs.length).toFixed(2),
-        ),
+        tiempo: Number((group.runs.reduce((acc, run) => acc + run.totalTime, 0) / group.runs.length).toFixed(2)),
       })) ?? [],
     [experiment],
   );
 
   const filteredRuns = useMemo(() => {
     const normalizedQuery = runQuery.trim().toLowerCase();
-    const runs = selectedRuns.filter((run) => normalizedQuery.length === 0 || run.label.toLowerCase().includes(normalizedQuery) || run.id.toLowerCase().includes(normalizedQuery));
+    const runs = selectedGroup?.runs ?? [];
 
-    return [...runs].sort((a, b) => {
-      if (runSort === "time-desc") return b.totalTime - a.totalTime;
-      if (runSort === "distance-asc") return a.totalDistance - b.totalDistance;
-      if (runSort === "distance-desc") return b.totalDistance - a.totalDistance;
-      return a.totalTime - b.totalTime;
-    });
-  }, [runQuery, runSort, selectedRuns]);
+    return [...runs]
+      .filter((run) => normalizedQuery.length === 0 || run.label.toLowerCase().includes(normalizedQuery) || run.id.toLowerCase().includes(normalizedQuery))
+      .sort((a, b) => {
+        if (runSort === "time-desc") return b.totalTime - a.totalTime;
+        if (runSort === "distance-asc") return a.totalDistance - b.totalDistance;
+        if (runSort === "distance-desc") return b.totalDistance - a.totalDistance;
+        return a.totalTime - b.totalTime;
+      });
+  }, [runQuery, runSort, selectedGroup]);
 
-  if (!experiment || !selectedGroup) {
+  if (isLoading) {
     return (
       <div className="p-8">
         <div className="rounded-2xl border border-blue-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
-          <p className="text-slate-600 dark:text-slate-400">No se encontro el experimento.</p>
+          <p className="text-slate-600 dark:text-slate-400">Cargando experimento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !experiment || !selectedGroup) {
+    return (
+      <div className="p-8">
+        <div className="rounded-2xl border border-blue-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+          <p className="text-slate-600 dark:text-slate-400">{error || "No se encontro el experimento."}</p>
           <Link href="/experiments">
             <Button className="mt-4">Volver</Button>
           </Link>
@@ -77,7 +150,9 @@ export default function ExperimentDetailPage() {
       <div className="sticky top-20 z-20 rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 via-cyan-50 to-white p-5 shadow-sm dark:border-slate-700 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <Link href="/experiments" className="hover:text-slate-900 dark:hover:text-white">Experimentos</Link>
+            <Link href="/experiments" className="hover:text-slate-900 dark:hover:text-white">
+              Experimentos
+            </Link>
             <ChevronRight className="h-4 w-4" />
             <span>{experiment.name}</span>
           </div>
@@ -129,7 +204,13 @@ export default function ExperimentDetailPage() {
           <p className="text-sm text-slate-500">Tiempo promedio vs cantidad de operarios</p>
         </div>
         <div className="p-4">
-          <SimulationChart data={chartData} isLoading={false} xAxisLabel="Operarios" yAxisLabel="Tiempo promedio (minutos)" barName="Tiempo promedio" />
+          <SimulationChart
+            data={chartData}
+            isLoading={false}
+            xAxisLabel="Operarios"
+            yAxisLabel="Tiempo promedio (minutos)"
+            barName="Tiempo promedio"
+          />
         </div>
       </div>
 
@@ -139,10 +220,7 @@ export default function ExperimentDetailPage() {
             <p className="text-sm font-semibold text-slate-900 dark:text-white">Filtrar operarios</p>
             <p className="text-sm text-slate-500">Elegí la cantidad y mirá sus runs</p>
           </div>
-          <Select
-            value={String(selectedOperatorCount)}
-            onValueChange={(value) => router.push(`/experiments/${experiment.id}?operators=${value}`)}
-          >
+          <Select value={String(resolvedOperatorCount)} onValueChange={(value) => router.push(`/experiments/${experiment.id}?operators=${value}`)}>
             <SelectTrigger className="w-full sm:w-[180px] border-blue-200 bg-white dark:border-slate-600 dark:bg-slate-950">
               <SelectValue placeholder="Operarios" />
             </SelectTrigger>
@@ -165,12 +243,7 @@ export default function ExperimentDetailPage() {
         <div className="grid grid-cols-1 gap-3 border-b border-blue-100 p-4 dark:border-slate-700 lg:grid-cols-2">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              value={runQuery}
-              onChange={(event) => setRunQuery(event.target.value)}
-              placeholder="Buscar run por nombre o id"
-              className="pl-9"
-            />
+            <Input value={runQuery} onChange={(event) => setRunQuery(event.target.value)} placeholder="Buscar run por nombre o id" className="pl-9" />
           </div>
           <Select value={runSort} onValueChange={setRunSort}>
             <SelectTrigger className="w-full">

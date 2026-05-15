@@ -111,6 +111,7 @@ class OperarioModel(BaseModel):
     nombre: str = Field(..., min_length=1)
     tiempo: float = Field(..., gt=0)
     distancia: float = Field(..., gt=0)
+    capacidad_max_peso: float = Field(..., gt=0)
     ruta: list[ProductoModel] = Field(..., min_length=1)
 
 class Run(BaseModel):

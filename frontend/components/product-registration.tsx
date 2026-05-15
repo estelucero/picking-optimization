@@ -1,34 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Coordinate } from "@/lib/ubicaciones";
 import { Plus, Package } from "lucide-react";
-
-interface Coordinate {
-  id: number;
-  x: number;
-  y: number;
-  name: string;
-  weight?: number;
-}
 
 interface ProductRegistrationProps {
   coordinates: Coordinate[];
   onAddProduct: (name: string, x: number, y: number, weight: number) => void;
   onDeleteProduct: (id: number) => void;
+  onUpdateProduct: (id: number, updates: Partial<Pick<Coordinate, "name" | "weight">>) => void;
+  onApplyWeightToAll: (weight: number) => void;
+  defaultWeight: number;
 }
 
 export function ProductRegistration({
   coordinates,
   onAddProduct,
   onDeleteProduct,
+  onUpdateProduct,
+  onApplyWeightToAll,
+  defaultWeight,
 }: ProductRegistrationProps) {
   const [productName, setProductName] = useState("");
   const [xCoord, setXCoord] = useState("0.0");
   const [yCoord, setYCoord] = useState("0.0");
-  const [weight, setWeight] = useState("5.5");
+  const [weight, setWeight] = useState(String(defaultWeight));
+
+  useEffect(() => {
+    setWeight(String(defaultWeight));
+  }, [defaultWeight]);
 
   const handleMapProduct = () => {
     if (!productName.trim()) {
@@ -44,7 +47,7 @@ export function ProductRegistration({
     setProductName("");
     setXCoord("0.0");
     setYCoord("0.0");
-    setWeight("5.5");
+    setWeight(String(defaultWeight));
   };
 
   return (
@@ -116,6 +119,15 @@ export function ProductRegistration({
           </div>
 
           <Button
+            type="button"
+            variant="outline"
+            onClick={() => onApplyWeightToAll(parseFloat(weight) || 0)}
+            className="w-full border-blue-200 dark:border-slate-600"
+          >
+            Aplicar peso a todos
+          </Button>
+
+          <Button
             onClick={handleMapProduct}
             className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold gap-2"
           >
@@ -150,43 +162,60 @@ export function ProductRegistration({
             </div>
           ) : (
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {coordinates.map((coord) => (
-                <div
-                  key={coord.id}
-                  className="p-3 bg-slate-50 dark:bg-slate-700 border border-blue-100 dark:border-slate-600 rounded-lg hover:border-blue-300 dark:hover:border-slate-500 transition-colors"
-                >
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="flex-1">
-                      <h4 className="font-bold text-slate-900 dark:text-white text-sm">
-                        {coord.name}
-                      </h4>
-                      <div className="flex gap-3 mt-1">
-                        <p className="text-xs text-slate-600 dark:text-slate-400">
-                          X: {coord.x.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">
-                          Y: {coord.y.toFixed(2)}
-                        </p>
+                {coordinates.map((coord) => (
+                  <div
+                    key={coord.id}
+                    className="p-3 bg-slate-50 dark:bg-slate-700 border border-blue-100 dark:border-slate-600 rounded-lg hover:border-blue-300 dark:hover:border-slate-500 transition-colors"
+                  >
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                        <div>
+                          <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                            Nombre
+                          </label>
+                          <Input
+                            value={coord.name}
+                            onChange={(e) => onUpdateProduct(coord.id, { name: e.target.value })}
+                            className="mt-1 border-blue-200 dark:border-slate-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                            Peso (KG)
+                          </label>
+                          <Input
+                            type="number"
+                            value={coord.weight ?? 0}
+                            onChange={(e) => onUpdateProduct(coord.id, { weight: parseFloat(e.target.value) || 0 })}
+                            step="0.1"
+                            className="mt-1 border-blue-200 dark:border-slate-600"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center gap-3">
+                        <div className="flex gap-3">
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            X: {coord.x.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            Y: {coord.y.toFixed(2)}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onDeleteProduct(coord.id)}
+                          className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          Eliminar
+                        </Button>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">
-                        {coord.weight ? coord.weight.toFixed(1) : "0.0"} kg
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onDeleteProduct(coord.id)}
-                        className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 mt-1"
-                      >
-                        Eliminar
-                      </Button>
-                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
         </CardContent>
       </Card>
     </div>

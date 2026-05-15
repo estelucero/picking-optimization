@@ -4,6 +4,7 @@ export interface Coordinate {
   y: number
   name: string
   weight?: number
+  isDeposit?: boolean
 }
 
 export interface ProductMapping {
@@ -37,26 +38,22 @@ const DEPOSITO_CODIGO = "DEPOSITO"
 
 export function toBackendPayload(name: string, coordinates: Coordinate[]): BackendUbicacionPayload {
   const productos = coordinates.map((coordinate) => ({
-    codigo: `SKU-${String(coordinate.id).padStart(3, "0")}`,
+    codigo: coordinate.isDeposit ? DEPOSITO_CODIGO : `SKU-${String(coordinate.id).padStart(3, "0")}`,
     nombre: coordinate.name,
     peso: coordinate.weight ?? 1,
     x: coordinate.x,
     y: coordinate.y,
   }))
 
-  productos.unshift({
-    codigo: DEPOSITO_CODIGO,
-    nombre: "Deposito",
-    peso: 1,
-    x: 0,
-    y: 0,
-  })
-
   return {
     name,
     deposito: DEPOSITO_CODIGO,
     productos,
   }
+}
+
+export function toBackendPayloadFromMapping(mapping: ProductMapping): BackendUbicacionPayload {
+  return toBackendPayload(mapping.name, mapping.coordinates)
 }
 
 export function fromBackendDocument(document: BackendUbicacionDocument): ProductMapping {
@@ -74,6 +71,45 @@ export function fromBackendDocument(document: BackendUbicacionDocument): Product
         weight: producto.peso,
       }
     })
+
+  return {
+    id: document.id,
+    name: document.name,
+    coordinates,
+    createdAt: document.created_at,
+  }
+}
+
+export function fromBackendDocumentWithDeposit(document: BackendUbicacionDocument): ProductMapping {
+  const deposit = document.productos.find((producto) => producto.codigo === document.deposito)
+  const productCoordinates = document.productos
+    .filter((producto) => producto.codigo !== document.deposito)
+    .map((producto, index) => {
+      const maybeId = Number.parseInt(producto.codigo.replace("SKU-", ""), 10)
+      const id = Number.isNaN(maybeId) ? index + 1 : maybeId
+
+      return {
+        id,
+        x: producto.x,
+        y: producto.y,
+        name: producto.nombre,
+        weight: producto.peso,
+      }
+    })
+
+  const coordinates: Coordinate[] = deposit
+    ? [
+        {
+          id: 0,
+          x: deposit.x,
+          y: deposit.y,
+          name: deposit.nombre,
+          weight: deposit.peso,
+          isDeposit: true,
+        },
+        ...productCoordinates,
+      ]
+    : productCoordinates
 
   return {
     id: document.id,

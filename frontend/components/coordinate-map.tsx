@@ -16,18 +16,21 @@ interface Coordinate {
   y: number;
   name: string;
   weight?: number;
+  isDeposit?: boolean;
 }
 
 interface CoordinateMapProps {
   coordinates: Coordinate[];
   onAddCoordinate: (x: number, y: number) => void;
   onRemoveCoordinate: (id: number) => void;
+  readOnly?: boolean;
 }
 
 export function CoordinateMap({
   coordinates,
   onAddCoordinate,
   onRemoveCoordinate,
+  readOnly = false,
 }: CoordinateMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
@@ -106,15 +109,20 @@ export function CoordinateMap({
     // Dibujar puntos
     coordinates.forEach((coord, index) => {
       const isHovered = hoveredPoint === coord.id;
+      const isDeposit = Boolean(coord.isDeposit);
 
       // Dibujar punto
       ctx.beginPath();
-      ctx.arc(coord.x, coord.y, POINT_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = isHovered ? "#3b82f6" : "#0891b2";
+      if (isDeposit) {
+        ctx.rect(coord.x - POINT_RADIUS, coord.y - POINT_RADIUS, POINT_RADIUS * 2, POINT_RADIUS * 2);
+      } else {
+        ctx.arc(coord.x, coord.y, POINT_RADIUS, 0, Math.PI * 2);
+      }
+      ctx.fillStyle = isDeposit ? "#f97316" : isHovered ? "#3b82f6" : "#0891b2";
       ctx.fill();
 
       // Dibujar borde
-      ctx.strokeStyle = isHovered ? "#60a5fa" : "#06b6d4";
+      ctx.strokeStyle = isDeposit ? "#fb923c" : isHovered ? "#60a5fa" : "#06b6d4";
       ctx.lineWidth = 2;
       ctx.stroke();
 
@@ -130,7 +138,7 @@ export function CoordinateMap({
       ctx.font = "bold 12px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(String(index + 1), coord.x, coord.y);
+      ctx.fillText(isDeposit ? "D" : String(index + 1), coord.x, coord.y);
     });
 
     // Dibujar borde
@@ -140,6 +148,8 @@ export function CoordinateMap({
   }, [coordinates, hoveredPoint]);
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (readOnly) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -162,6 +172,8 @@ export function CoordinateMap({
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (readOnly) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -180,6 +192,8 @@ export function CoordinateMap({
   };
 
   const handleCanvasMouseLeave = () => {
+    if (readOnly) return;
+
     setHoveredPoint(null);
     const canvas = canvasRef.current;
     if (canvas) {
@@ -188,6 +202,8 @@ export function CoordinateMap({
   };
 
   const clearAllCoordinates = () => {
+    if (readOnly) return;
+
     coordinates.forEach((coord) => onRemoveCoordinate(coord.id));
   };
 
@@ -204,6 +220,7 @@ export function CoordinateMap({
             variant="outline"
             className="w-10 h-10 p-0 text-slate-600 dark:text-slate-400"
             title="Zoom In"
+            disabled={readOnly}
           >
             +
           </Button>
@@ -212,6 +229,7 @@ export function CoordinateMap({
             variant="outline"
             className="w-10 h-10 p-0 text-slate-600 dark:text-slate-400"
             title="Zoom Out"
+            disabled={readOnly}
           >
             −
           </Button>
@@ -220,6 +238,7 @@ export function CoordinateMap({
             variant="outline"
             className="w-10 h-10 p-0 text-slate-600 dark:text-slate-400"
             title="Reset View"
+            disabled={readOnly}
           >
             ⊡
           </Button>
@@ -235,7 +254,7 @@ export function CoordinateMap({
           onClick={handleCanvasClick}
           onMouseMove={handleCanvasMouseMove}
           onMouseLeave={handleCanvasMouseLeave}
-          className="cursor-crosshair"
+          className={readOnly ? "cursor-default" : "cursor-crosshair"}
           style={{ touchAction: "none" }}
         />
       </div>

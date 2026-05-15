@@ -14,7 +14,7 @@ export function Sidebar() {
       icon: LayoutGrid,
     },
     {
-      href: "/product-mapping",
+      href: "/distributions",
       label: "Distribuciones",
       icon: MapPin,
     },
