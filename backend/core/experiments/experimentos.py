@@ -147,6 +147,7 @@ class Experimentos:
                         operario_models.append(OperarioModel(nombre=operario.nombre,
                                       tiempo=viaje.tiempo,
                                       distancia=viaje.distancia.metros,
+                                      capacidad_max_peso=operario.carro.capacidad_max_peso,
                                       ruta=ruta))
 
 

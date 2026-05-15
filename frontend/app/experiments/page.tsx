@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -9,19 +9,78 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { experiments, formatExperimentDate, formatExperimentTime } from "@/lib/experimentos";
-
-const statusOptions = ["Todos", ...new Set(experiments.map((experiment) => experiment.status))];
-const operatorOptions = ["Todos", ...new Set(experiments.flatMap((experiment) => experiment.operatorCounts))].sort((a, b) => {
-  if (a === "Todos") return -1;
-  if (b === "Todos") return 1;
-  return Number(a) - Number(b);
-});
+import {
+  buildExperimentSummaries,
+  formatExperimentDate,
+  formatExperimentTime,
+  type BackendExperimentoPreview,
+  type BackendRunPreview,
+  type ExperimentSummary,
+} from "@/lib/experimentos-rest";
 
 export default function ExperimentsPage() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("Todos");
   const [operatorFilter, setOperatorFilter] = useState("Todos");
+  const [experiments, setExperiments] = useState<ExperimentSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadExperiments() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const [experimentsResponse, runPreviewsResponse] = await Promise.all([
+          fetch("/api/experimento_preview", { cache: "no-store" }),
+          fetch("/api/run_preview", { cache: "no-store" }),
+        ]);
+
+        if (!experimentsResponse.ok) {
+          throw new Error("No se pudieron obtener los experimentos");
+        }
+
+        if (!runPreviewsResponse.ok) {
+          throw new Error("No se pudieron obtener los run previews");
+        }
+
+        const previews = (await experimentsResponse.json()) as BackendExperimentoPreview[];
+        const runPreviews = (await runPreviewsResponse.json()) as BackendRunPreview[];
+
+        if (!cancelled) {
+          setExperiments(buildExperimentSummaries(previews, runPreviews));
+        }
+      } catch (loadError) {
+        console.error("Error loading experiments:", loadError);
+        if (!cancelled) {
+          setError("No se pudo cargar el historial de experimentos");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadExperiments();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const statusOptions = useMemo(() => ["Todos", ...new Set(experiments.map((experiment) => experiment.status))], [experiments]);
+  const operatorOptions = useMemo(
+    () => ["Todos", ...new Set(experiments.flatMap((experiment) => experiment.operatorCounts))].sort((a, b) => {
+      if (a === "Todos") return -1;
+      if (b === "Todos") return 1;
+      return Number(a) - Number(b);
+    }),
+    [experiments],
+  );
 
   const filteredExperiments = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -36,7 +95,7 @@ export default function ExperimentsPage() {
 
       return matchesQuery && matchesStatus && matchesOperators;
     });
-  }, [operatorFilter, query, status]);
+  }, [experiments, operatorFilter, query, status]);
 
   return (
     <div className="p-8 space-y-6">
@@ -99,6 +158,20 @@ export default function ExperimentsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {isLoading && (
+              <TableRow>
+                <TableCell colSpan={9} className="py-8 text-center text-slate-500">
+                  Cargando historial...
+                </TableCell>
+              </TableRow>
+            )}
+            {error && !isLoading && (
+              <TableRow>
+                <TableCell colSpan={9} className="py-8 text-center text-red-500">
+                  {error}
+                </TableCell>
+              </TableRow>
+            )}
             {filteredExperiments.map((experiment) => (
               <TableRow key={experiment.id}>
                 <TableCell>
@@ -124,7 +197,7 @@ export default function ExperimentsPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {filteredExperiments.length === 0 && (
+            {!isLoading && !error && filteredExperiments.length === 0 && (
               <TableRow>
                 <TableCell colSpan={9} className="py-8 text-center text-slate-500">
                   No hay experimentos con esos filtros.
