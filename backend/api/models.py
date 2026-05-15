@@ -97,6 +97,7 @@ class ProductoModel(BaseModel):
     x: float = Field(..., description="Coordenada X en el depósito")
     y: float = Field(..., description="Coordenada Y en el depósito")
     cantidad: int = Field(..., ge=1)
+    codigo_pedido: str = Field(default="")
 
 class PedidoModel(BaseModel):
     codigo: str = Field(..., min_length=1)

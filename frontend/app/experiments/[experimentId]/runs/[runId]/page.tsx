@@ -7,7 +7,14 @@ import { ChevronRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   formatExperimentDate,
   formatExperimentTime,
@@ -17,11 +24,27 @@ import {
 } from "@/lib/experimentos-rest";
 
 function formatNumber(value?: number, digits = 1): string {
-  return Number.isFinite(value) ? Number(value).toFixed(digits) : (digits === 2 ? "0.00" : "0.0");
+  return Number.isFinite(value)
+    ? Number(value).toFixed(digits)
+    : digits === 2
+      ? "0.00"
+      : "0.0";
 }
 
-function formatRoute(route: { nombre: string; peso: number; cantidad?: number }[]): string {
-  return route.map((item) => `${item.nombre} · ${formatNumber(item.peso, 1)} kg`).join(" -> ");
+function formatRoute(
+  route: {
+    nombre: string;
+    peso: number;
+    cantidad?: number;
+    codigo_pedido?: string;
+  }[],
+): string {
+  return route
+    .map(
+      (item) =>
+        `${item.nombre} · ${formatNumber(item.peso, 1)} kg · ${item.codigo_pedido}`,
+    )
+    .join(" -> ");
 }
 
 export default function RunDetailPage() {
@@ -29,7 +52,8 @@ export default function RunDetailPage() {
   const searchParams = useSearchParams();
 
   const operatorCount = Number(searchParams.get("operators") || 1);
-  const [experiment, setExperiment] = useState<BackendExperimentoPreview | null>(null);
+  const [experiment, setExperiment] =
+    useState<BackendExperimentoPreview | null>(null);
   const [runPreview, setRunPreview] = useState<BackendRunPreview | null>(null);
   const [runLabel, setRunLabel] = useState<string | null>(null);
   const [run, setRun] = useState<BackendRunDocument | null>(null);
@@ -46,7 +70,10 @@ export default function RunDetailPage() {
       try {
         const [experimentsResponse, runPreviewsResponse] = await Promise.all([
           fetch("/api/experimento_preview", { cache: "no-store" }),
-          fetch(`/api/run_preview?experimento_preview_id=${params.experimentId}`, { cache: "no-store" }),
+          fetch(
+            `/api/run_preview?experimento_preview_id=${params.experimentId}`,
+            { cache: "no-store" },
+          ),
         ]);
 
         if (!experimentsResponse.ok) {
@@ -57,13 +84,20 @@ export default function RunDetailPage() {
           throw new Error("No se pudieron obtener los run previews");
         }
 
-        const previews = (await experimentsResponse.json()) as BackendExperimentoPreview[];
-        const preview = previews.find((item) => item.id === params.experimentId) ?? null;
-        const runPreviews = (await runPreviewsResponse.json()) as BackendRunPreview[];
-        const selectedIndex = runPreviews.findIndex((item) => item.id === params.runId);
-        const selectedRunPreview = selectedIndex >= 0 ? runPreviews[selectedIndex] : null;
+        const previews =
+          (await experimentsResponse.json()) as BackendExperimentoPreview[];
+        const preview =
+          previews.find((item) => item.id === params.experimentId) ?? null;
+        const runPreviews =
+          (await runPreviewsResponse.json()) as BackendRunPreview[];
+        const selectedIndex = runPreviews.findIndex(
+          (item) => item.id === params.runId,
+        );
+        const selectedRunPreview =
+          selectedIndex >= 0 ? runPreviews[selectedIndex] : null;
         const visibleLabel =
-          selectedRunPreview && selectedRunPreview.nombre.trim().toLowerCase() !== "pendiente"
+          selectedRunPreview &&
+          selectedRunPreview.nombre.trim().toLowerCase() !== "pendiente"
             ? selectedRunPreview.nombre
             : `Run ${selectedIndex + 1}`;
 
@@ -71,7 +105,10 @@ export default function RunDetailPage() {
           throw new Error("No se encontro el run");
         }
 
-        const runResponse = await fetch(`/api/run?run_preview_id=${params.runId}`, { cache: "no-store" });
+        const runResponse = await fetch(
+          `/api/run?run_preview_id=${params.runId}`,
+          { cache: "no-store" },
+        );
         if (!runResponse.ok) {
           throw new Error("No se pudo obtener el run");
         }
@@ -126,7 +163,9 @@ export default function RunDetailPage() {
     return (
       <div className="p-8">
         <div className="rounded-2xl border border-blue-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
-          <p className="text-slate-600 dark:text-slate-400">{error || "No se encontro el run."}</p>
+          <p className="text-slate-600 dark:text-slate-400">
+            {error || "No se encontro el run."}
+          </p>
           <Link href={`/experiments/${params.experimentId}`}>
             <Button className="mt-4">Volver al experimento</Button>
           </Link>
@@ -139,11 +178,17 @@ export default function RunDetailPage() {
     <div className="p-8 space-y-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Link href="/experiments" className="hover:text-slate-900 dark:hover:text-white">
+          <Link
+            href="/experiments"
+            className="hover:text-slate-900 dark:hover:text-white"
+          >
             Experimentos
           </Link>
           <ChevronRight className="h-4 w-4" />
-          <Link href={`/experiments/${experiment.id}?operators=${operatorCount}`} className="hover:text-slate-900 dark:hover:text-white">
+          <Link
+            href={`/experiments/${experiment.id}?operators=${operatorCount}`}
+            className="hover:text-slate-900 dark:hover:text-white"
+          >
             {experiment.nombre}
           </Link>
           <ChevronRight className="h-4 w-4" />
@@ -153,13 +198,16 @@ export default function RunDetailPage() {
           {runLabel || runPreview.nombre} · {operatorCount} operarios
         </h1>
         <p className="text-slate-600 dark:text-slate-400">
-          Experimento {experiment.nombre} · {formatExperimentDate(experiment.fecha)}
+          Experimento {experiment.nombre} ·{" "}
+          {formatExperimentDate(experiment.fecha)}
         </p>
       </div>
 
       <div className="overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <div className="border-b border-blue-100 bg-slate-50 px-5 py-3 dark:border-slate-700 dark:bg-slate-900">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">Metricas</p>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            Metricas
+          </p>
           <p className="text-sm text-slate-500">Resumen del run seleccionado</p>
         </div>
         <Table>
@@ -209,8 +257,12 @@ export default function RunDetailPage() {
                 <TableCell>
                   <div className="flex flex-wrap gap-2">
                     {pedido.items.map((item) => (
-                      <Badge key={`${pedido.codigo}-${item.codigo}`} variant="secondary">
-                        {item.nombre} · {formatNumber(item.peso, 1)} kg x{item.cantidad}
+                      <Badge
+                        key={`${pedido.codigo}-${item.codigo}`}
+                        variant="secondary"
+                      >
+                        {item.nombre} · {formatNumber(item.peso, 1)} kg x
+                        {item.cantidad}
                       </Badge>
                     ))}
                   </div>
@@ -224,7 +276,9 @@ export default function RunDetailPage() {
       <div className="overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <div className="border-b border-blue-100 bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-3 text-white dark:border-slate-700">
           <p className="text-sm font-semibold">Operarios</p>
-          <p className="text-sm text-blue-100">Detalle por operario con tiempos y rutas</p>
+          <p className="text-sm text-blue-100">
+            Detalle por operario con tiempos y rutas
+          </p>
         </div>
         <Table>
           <TableHeader>
@@ -242,7 +296,11 @@ export default function RunDetailPage() {
                 <TableCell>{operario.nombre}</TableCell>
                 <TableCell>{formatExperimentTime(operario.tiempo)}</TableCell>
                 <TableCell>{formatNumber(operario.distancia, 2)} m</TableCell>
-                <TableCell>{operario.capacidad_max_peso ? `${formatNumber(operario.capacidad_max_peso, 1)} kg` : "N/D"}</TableCell>
+                <TableCell>
+                  {operario.capacidad_max_peso
+                    ? `${formatNumber(operario.capacidad_max_peso, 1)} kg`
+                    : "N/D"}
+                </TableCell>
                 <TableCell>{formatRoute(operario.ruta)}</TableCell>
               </TableRow>
             ))}
@@ -253,8 +311,12 @@ export default function RunDetailPage() {
       {metricas.length > 0 && (
         <div className="overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <div className="border-b border-blue-100 bg-slate-50 px-5 py-3 dark:border-slate-700 dark:bg-slate-900">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">Metricas extra</p>
-            <p className="text-sm text-slate-500">Valores devueltos por el backend</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              Metricas extra
+            </p>
+            <p className="text-sm text-slate-500">
+              Valores devueltos por el backend
+            </p>
           </div>
           <Table>
             <TableHeader>
