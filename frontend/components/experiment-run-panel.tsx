@@ -61,7 +61,9 @@ export function ExperimentRunPanel({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData?.detail || errorData?.error || "Error en la simulacion");
+        throw new Error(
+          errorData?.detail || errorData?.error || "Error en la simulacion",
+        );
       }
 
       const data = await response.json();
@@ -82,7 +84,7 @@ export function ExperimentRunPanel({
           Configuracion de Experimento
         </CardTitle>
         <CardDescription className="text-blue-100">
-          Configrua las variables de la simulacion
+          Configura las variables de la simulacion
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 pt-6">
@@ -157,8 +159,8 @@ export function ExperimentRunPanel({
             className="w-full border-blue-200 dark:border-slate-600 focus:ring-blue-500 dark:bg-slate-900 dark:text-white"
           />
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Se evalua de 1 a {maxOperarios} operarios sobre los mismos escenarios
-            de pedidos por iteracion
+            Se evalua de 1 a {maxOperarios} operarios sobre los mismos
+            escenarios de pedidos por iteracion
           </p>
         </div>
 
