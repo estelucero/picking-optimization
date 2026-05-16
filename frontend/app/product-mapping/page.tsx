@@ -59,14 +59,21 @@ export default function ProductMappingPage() {
     setCoordinates((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const handleUpdateCoordinate = (id: number, updates: Partial<Pick<Coordinate, "name" | "weight">>) => {
+  const handleUpdateCoordinate = (
+    id: number,
+    updates: Partial<Pick<Coordinate, "name" | "weight">>,
+  ) => {
     setCoordinates((prev) =>
-      prev.map((coordinate) => (coordinate.id === id ? { ...coordinate, ...updates } : coordinate)),
+      prev.map((coordinate) =>
+        coordinate.id === id ? { ...coordinate, ...updates } : coordinate,
+      ),
     );
   };
 
   const handleApplyWeightToAll = (weight: number) => {
-    setCoordinates((prev) => prev.map((coordinate) => ({ ...coordinate, weight })));
+    setCoordinates((prev) =>
+      prev.map((coordinate) => ({ ...coordinate, weight })),
+    );
   };
 
   const handleSaveMapping = async () => {
@@ -76,7 +83,10 @@ export default function ProductMappingPage() {
     }
 
     try {
-      const payload = toBackendPayload(mappingName.trim() || "Nueva distribucion", coordinates);
+      const payload = toBackendPayload(
+        mappingName.trim() || "Nueva distribucion",
+        coordinates,
+      );
 
       const response = await fetch("/api/ubicaciones", {
         method: "POST",
@@ -88,7 +98,11 @@ export default function ProductMappingPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData?.detail || errorData?.error || "No se pudo guardar la distribucion");
+        throw new Error(
+          errorData?.detail ||
+            errorData?.error ||
+            "No se pudo guardar la distribucion",
+        );
       }
 
       localStorage.removeItem("currentProductMapping");
@@ -126,18 +140,6 @@ export default function ProductMappingPage() {
           </div>
         </div>
         <div className="space-y-3 lg:w-64">
-          <div>
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Peso por producto
-            </label>
-            <Input
-              type="number"
-              value={defaultWeight}
-              onChange={(e) => setDefaultWeight(e.target.value)}
-              step="0.1"
-              className="mt-2 border-blue-200 dark:border-slate-600"
-            />
-          </div>
           {coordinates.length > 0 && (
             <Button
               onClick={handleSaveMapping}
@@ -158,7 +160,12 @@ export default function ProductMappingPage() {
               coordinates={coordinates}
               onAddCoordinate={(x, y) => {
                 const productName = `Producto ${nextId}`;
-                handleAddCoordinate(productName, x, y, parseFloat(defaultWeight) || 0);
+                handleAddCoordinate(
+                  productName,
+                  x,
+                  y,
+                  parseFloat(defaultWeight) || 0,
+                );
               }}
               onRemoveCoordinate={handleRemoveCoordinate}
             />
