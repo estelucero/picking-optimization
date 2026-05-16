@@ -29,6 +29,7 @@ class Ubicaciones(Grafo):
 
     # Atributos internos que no se serializan ni exponen en el schema
     _productos: dict[str, Producto] = PrivateAttr(default_factory=dict)
+    #* Matriz de distancia de x producto a y producto
     _distancias: dict[str, dict[str, UnidadDistancia]] = PrivateAttr(default_factory=dict)
 
     @model_validator(mode='after')
