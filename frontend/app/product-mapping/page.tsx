@@ -88,6 +88,15 @@ export default function ProductMappingPage() {
         coordinates,
       );
 
+      //! DEUDA TECNICA BORRAR PARA PASAR A MODELO
+      payload.productos.unshift({
+        codigo: "DEPOSITO",
+        nombre: "DEPOSITO",
+        peso: 0.1,
+        x: 0,
+        y: 0,
+      });
+
       const response = await fetch("/api/ubicaciones", {
         method: "POST",
         headers: {
