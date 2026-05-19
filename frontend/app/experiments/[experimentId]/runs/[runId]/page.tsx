@@ -2,11 +2,27 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { ChevronRight, GitCompare } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -50,6 +66,7 @@ function formatRoute(
 export default function RunDetailPage() {
   const params = useParams<{ experimentId: string; runId: string }>();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const operatorCount = Number(searchParams.get("operators") || 1);
   const [experiment, setExperiment] =
@@ -59,6 +76,11 @@ export default function RunDetailPage() {
   const [run, setRun] = useState<BackendRunDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [runPreviews, setRunPreviews] = useState<BackendRunPreview[]>([]);
+  const [compareDialogOpen, setCompareDialogOpen] = useState(false);
+  const [selectedCompareOperatorCount, setSelectedCompareOperatorCount] =
+    useState<number>(operatorCount);
+  const [selectedCompareRun, setSelectedCompareRun] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -88,13 +110,13 @@ export default function RunDetailPage() {
           (await experimentsResponse.json()) as BackendExperimentoPreview[];
         const preview =
           previews.find((item) => item.id === params.experimentId) ?? null;
-        const runPreviews =
+        const allRunPreviews =
           (await runPreviewsResponse.json()) as BackendRunPreview[];
-        const selectedIndex = runPreviews.findIndex(
+        const selectedIndex = allRunPreviews.findIndex(
           (item) => item.id === params.runId,
         );
         const selectedRunPreview =
-          selectedIndex >= 0 ? runPreviews[selectedIndex] : null;
+          selectedIndex >= 0 ? allRunPreviews[selectedIndex] : null;
         const visibleLabel =
           selectedRunPreview &&
           selectedRunPreview.nombre.trim().toLowerCase() !== "pendiente"
@@ -125,6 +147,7 @@ export default function RunDetailPage() {
           setRunPreview(selectedRunPreview);
           setRunLabel(visibleLabel);
           setRun(selectedRun);
+          setRunPreviews(allRunPreviews);
         }
       } catch (loadError) {
         console.error("Error loading run detail:", loadError);
@@ -148,6 +171,27 @@ export default function RunDetailPage() {
   const metricas = useMemo(() => run?.metricas ?? [], [run]);
   const pedidos = useMemo(() => run?.pedidos ?? [], [run]);
   const operarios = useMemo(() => run?.operarios ?? [], [run]);
+  const compareOperatorCounts = useMemo(
+    () => Array.from(new Set(runPreviews.map((item) => item.operarios))).sort((a, b) => a - b),
+    [runPreviews],
+  );
+  const compareRunOptions = useMemo(
+    () =>
+      runPreviews.filter(
+        (rp) =>
+          rp.id !== params.runId &&
+          rp.operarios === selectedCompareOperatorCount,
+      ),
+    [params.runId, runPreviews, selectedCompareOperatorCount],
+  );
+
+  function handleCompareDialogChange(open: boolean) {
+    setCompareDialogOpen(open);
+    if (open) {
+      setSelectedCompareOperatorCount(operatorCount);
+      setSelectedCompareRun("");
+    }
+  }
 
   if (isLoading) {
     return (
@@ -177,7 +221,7 @@ export default function RunDetailPage() {
   return (
     <div className="p-8 space-y-6">
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 text-sm text-slate-500">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
           <Link
             href="/experiments"
             className="hover:text-slate-900 dark:hover:text-white"
@@ -194,13 +238,106 @@ export default function RunDetailPage() {
           <ChevronRight className="h-4 w-4" />
           <span>{runLabel || runPreview.nombre}</span>
         </div>
-        <h1 className="text-4xl font-bold text-slate-900 dark:text-white">
-          {runLabel || runPreview.nombre} · {operatorCount} operarios
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400">
-          Experimento {experiment.nombre} ·{" "}
-          {formatExperimentDate(experiment.fecha)}
-        </p>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-4xl font-bold text-slate-900 dark:text-white">
+              {runLabel || runPreview.nombre} · {operatorCount} operarios
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400">
+              Experimento {experiment.nombre} ·{" "}
+              {formatExperimentDate(experiment.fecha)}
+            </p>
+          </div>
+
+          <Dialog open={compareDialogOpen} onOpenChange={handleCompareDialogChange}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full gap-2 sm:w-auto">
+                <GitCompare className="h-4 w-4" />
+                Comparar con otro run
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Seleccionar run para comparar</DialogTitle>
+                <DialogDescription>
+                  Primero elegi la cantidad de operarios y despues el run
+                  especifico.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-slate-900 dark:text-white">
+                  Cantidad de operarios
+                </p>
+                <Select
+                  value={String(selectedCompareOperatorCount)}
+                  onValueChange={(value) => {
+                    setSelectedCompareOperatorCount(Number(value));
+                    setSelectedCompareRun("");
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona operarios" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {compareOperatorCounts.map((count) => (
+                      <SelectItem key={count} value={String(count)}>
+                        {count} operarios
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-slate-900 dark:text-white">
+                  Run a comparar
+                </p>
+                <Select
+                  value={selectedCompareRun}
+                  onValueChange={setSelectedCompareRun}
+                  disabled={compareRunOptions.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        compareRunOptions.length === 0
+                          ? "No hay runs para ese grupo"
+                          : "Selecciona un run"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {compareRunOptions.map((rp, index) => {
+                      const label =
+                        rp.nombre.trim().toLowerCase() !== "pendiente"
+                          ? rp.nombre
+                          : `Run ${index + 1}`;
+                      return (
+                        <SelectItem key={rp.id} value={rp.id}>
+                          {label} · {formatExperimentTime(rp.tiempo)}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <DialogFooter>
+                <Button
+                  disabled={!selectedCompareRun}
+                  onClick={() => {
+                    if (selectedCompareRun) {
+                      router.push(
+                        `/experiments/${params.experimentId}/runs/${params.runId}/compare?with=${selectedCompareRun}&operators=${selectedCompareOperatorCount}`,
+                      );
+                    }
+                  }}
+                >
+                  Comparar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
@@ -210,7 +347,7 @@ export default function RunDetailPage() {
           </p>
           <p className="text-sm text-slate-500">Resumen del run seleccionado</p>
         </div>
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
               <TableHead>Metrica</TableHead>
@@ -254,12 +391,13 @@ export default function RunDetailPage() {
               <TableRow key={pedido.codigo}>
                 <TableCell>{pedido.codigo}</TableCell>
                 <TableCell>{pedido.cliente}</TableCell>
-                <TableCell>
+                <TableCell className="whitespace-normal break-words">
                   <div className="flex flex-wrap gap-2">
                     {pedido.items.map((item) => (
                       <Badge
                         key={`${pedido.codigo}-${item.codigo}`}
                         variant="secondary"
+                        className="max-w-full whitespace-normal text-left"
                       >
                         {item.nombre} · {formatNumber(item.peso, 1)} kg x
                         {item.cantidad}
@@ -280,7 +418,7 @@ export default function RunDetailPage() {
             Detalle por operario con tiempos y rutas
           </p>
         </div>
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
               <TableHead>Operario</TableHead>
@@ -301,7 +439,9 @@ export default function RunDetailPage() {
                     ? `${formatNumber(operario.capacidad_max_peso, 1)} kg`
                     : "N/D"}
                 </TableCell>
-                <TableCell>{formatRoute(operario.ruta)}</TableCell>
+                <TableCell className="max-w-[420px] whitespace-normal break-words">
+                  {formatRoute(operario.ruta)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
