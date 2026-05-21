@@ -28,6 +28,7 @@ class ConfiguracionExperimento(BaseModel):
     velocidad_operario_m_s: float = Field(default=1.0, gt=0)
     capacidad_carro: float = Field(default=30.0, gt=0)
     seed: int | None = None
+    layout_name: str = Field(default="Layout default", min_length=1)
 
 
 class ResultadoOperario(BaseModel):
@@ -75,9 +76,9 @@ class Experimentos:
         }
 
         #TODO:crear experimento preview
-        experiemento_preview = ExperimentoPreview(nombre="pendiente",
+        experiemento_preview = ExperimentoPreview(nombre=datetime.now().strftime("%Y/%m/%d/ %H:%M:%S"),
                            fecha=datetime.now(),
-                           layout="pendiente",
+                           layout=self._configuracion.layout_name,
                            max_operarios=self._configuracion.max_operarios,
                            runs=self._configuracion.iteraciones,
                            estado="creado")
