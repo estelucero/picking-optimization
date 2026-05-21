@@ -33,12 +33,29 @@ class Modelo(Heuristica):
 
         tiempo_minimo = 0
         for producto, cantidad in productos:
-            
-            mejor_operario, mejor_tiempo, distancia, secuencia = self._elegir_operario(
-                producto, cantidad, operarios, beta_picking
-            )
-            # mejor_operario.agregar_tiempo(mejor_tiempo)
-            self._agregar_producto(mejor_operario, producto, cantidad, mejor_tiempo, distancia, secuencia)
+
+            producto_no_asignado = True
+
+            while producto_no_asignado:
+
+                mejor_operario, mejor_tiempo, distancia, secuencia = self._elegir_operario(
+                    producto, cantidad, operarios, beta_picking
+                )
+
+                """Agrega un producto al carro del operario, cerrando viaje si está lleno."""
+                carro_lleno = not (mejor_operario.puedo_agregar(producto, cantidad))
+
+                #si el carro esta lleno, cierro el viaje del mejor operario y vuelvo a calcular
+                if carro_lleno:
+                    mejor_operario.cerrar_viaje()
+                    # en la siguiente iteracion este operario tendra el carro vacio para hacer de nuevo el calculo
+                else:
+                    mejor_operario.agregar_producto(producto, cantidad, mejor_tiempo, distancia, secuencia)
+                    #Al agregar un producto a algun operario se termina el while
+                    producto_no_asignado = False
+
+                # mejor_operario.agregar_tiempo(mejor_tiempo)
+                # self._agregar_producto(mejor_operario, producto, cantidad, mejor_tiempo, distancia, secuencia)
     
         for op in operarios:
             #!A revisar
@@ -70,6 +87,7 @@ class Modelo(Heuristica):
         """Retorna el operario y el tiempo estimado mínimo."""
         mejor_operario = None
         mejor_tiempo = float("inf")
+        tiempo_secuencia = float("inf")
 
         #Tiempo proyectado = tiempo acumulado + tiempo batch actual
         for op in operarios:
@@ -81,8 +99,9 @@ class Modelo(Heuristica):
                 mejor_operario = op
                 mejor_distancia = distancia
                 mejor_secuencia = secuencia
+                tiempo_secuencia = tiempo_estimado
 
-        return mejor_operario, mejor_tiempo, mejor_distancia, mejor_secuencia
+        return mejor_operario, tiempo_secuencia, mejor_distancia, mejor_secuencia
 
     def _calcular_tiempo_estimado(
         self,
