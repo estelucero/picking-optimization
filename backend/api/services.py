@@ -1,4 +1,4 @@
-from api.models import ExperimentoRunRequest
+from api.models import ExperimentoRunRequest, UbicacionBase
 from core.experiments.experimentos import ConfiguracionExperimento, Experimentos
 from core.infrastructure.Producto import Producto
 
@@ -28,6 +28,7 @@ class ExperimentoService:
             beta_picking=payload.beta_picking,
             deposito=ubicacion_document.get("deposito", "DEPOSITO"),
             seed=payload.seed,
+            layout_name=ubicacion_document.get("name")
         )
 
         resultado = Experimentos(productos=productos, configuracion=configuracion).ejecutar()
