@@ -83,11 +83,12 @@ class Experimentos:
                            estado="creado")
         created_experimento_preview = create_experimento_preview(experiemento_preview)
 
+        numero_run = 0
         #Itero cantidad de runs por operario
         for indice_iteracion in range(self._configuracion.iteraciones):
             #Genero pedidos
             pedidos = self._generar_pedidos_poisson(rng, indice_iteracion)
-
+            numero_run = numero_run + 1
             # pedido_model: PedidoModel
             pedido_models: list[PedidoModel] = []
 
@@ -155,7 +156,7 @@ class Experimentos:
 
 
                 run_preview = RunPreview(experimento_preview_id=created_experimento_preview["id"],
-                                         nombre="Pendiente",
+                                         nombre="Run " + str(numero_run),
                                          tiempo=resultado.tiempo_minimo,
                                          distancia=distancia_total,
                                          pedidos=len(pedidos),
