@@ -34,10 +34,17 @@ import {
 import {
   formatExperimentDate,
   formatExperimentTime,
+  type BackendOperario,
   type BackendExperimentoPreview,
   type BackendRunDocument,
   type BackendRunPreview,
 } from "@/lib/experimentos-rest";
+import {
+  type BackendUbicacionDocument,
+  fromBackendDocumentWithDeposit,
+  type ProductMapping,
+} from "@/lib/ubicaciones";
+import { RoutePreviewMap } from "@/components/route-preview-map";
 
 function formatNumber(value?: number, digits = 1): string {
   return Number.isFinite(value)
@@ -63,6 +70,21 @@ function formatRoute(
     .join(" -> ");
 }
 
+function normalizeText(value: string | undefined): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+interface BackendExperimentoDocument {
+  id: string;
+  experimento_preview_id: string;
+  ubicacion_id: string;
+  created_at?: string;
+}
+
 export default function RunDetailPage() {
   const params = useParams<{ experimentId: string; runId: string }>();
   const searchParams = useSearchParams();
@@ -81,6 +103,12 @@ export default function RunDetailPage() {
   const [selectedCompareOperatorCount, setSelectedCompareOperatorCount] =
     useState<number>(operatorCount);
   const [selectedCompareRun, setSelectedCompareRun] = useState<string>("");
+  const [selectedRouteJourney, setSelectedRouteJourney] =
+    useState<BackendOperario | null>(null);
+  const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
+  const [distribution, setDistribution] = useState<ProductMapping | null>(null);
+  const [isDistributionLoading, setIsDistributionLoading] = useState(false);
+  const [distributionError, setDistributionError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,6 +218,79 @@ export default function RunDetailPage() {
     if (open) {
       setSelectedCompareOperatorCount(operatorCount);
       setSelectedCompareRun("");
+    }
+  }
+
+  async function openRoutePreview(operario: BackendOperario) {
+    setSelectedRouteJourney(operario);
+    setIsRouteDialogOpen(true);
+
+    if (distribution || isDistributionLoading) {
+      return;
+    }
+
+    setIsDistributionLoading(true);
+    setDistributionError(null);
+
+    try {
+      const experimentosResponse = await fetch("/api/experimentos", {
+        cache: "no-store",
+      });
+      if (!experimentosResponse.ok) {
+        throw new Error("No se pudieron cargar los experimentos");
+      }
+
+      const experiments =
+        (await experimentosResponse.json()) as BackendExperimentoDocument[];
+      const linkedExperiments = experiments.filter(
+        (item) => item.experimento_preview_id === params.experimentId,
+      );
+
+      const linkedExperiment = linkedExperiments
+        .slice()
+        .sort((a, b) => {
+          const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return bTime - aTime;
+        })[0];
+
+      if (linkedExperiment?.ubicacion_id) {
+        const distributionByIdResponse = await fetch(
+          `/api/ubicaciones/${linkedExperiment.ubicacion_id}`,
+          { cache: "no-store" },
+        );
+
+        if (distributionByIdResponse.ok) {
+          const document =
+            (await distributionByIdResponse.json()) as BackendUbicacionDocument;
+          setDistribution(fromBackendDocumentWithDeposit(document));
+          return;
+        }
+      }
+
+      const response = await fetch("/api/ubicaciones", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("No se pudieron cargar las distribuciones");
+      }
+
+      const documents = (await response.json()) as BackendUbicacionDocument[];
+      const layoutValue = normalizeText(experiment.layout);
+      const matchedDistribution = documents.find(
+        (item) =>
+          normalizeText(item.id) === layoutValue ||
+          normalizeText(item.name) === layoutValue,
+      );
+
+      if (!matchedDistribution) {
+        throw new Error("No se encontro la distribucion del layout del experimento");
+      }
+
+      setDistribution(fromBackendDocumentWithDeposit(matchedDistribution));
+    } catch (routeError) {
+      console.error("Error loading distribution for route preview:", routeError);
+      setDistributionError("No se pudo cargar la distribucion para este run");
+    } finally {
+      setIsDistributionLoading(false);
     }
   }
 
@@ -426,11 +527,14 @@ export default function RunDetailPage() {
               <TableHead>Distancia</TableHead>
               <TableHead>Capacidad carro</TableHead>
               <TableHead>Ruta</TableHead>
+              <TableHead>Accion</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {operarios.map((operario) => (
-              <TableRow key={operario.nombre}>
+              <TableRow
+                key={`${operario.nombre}-${operario.tiempo}-${operario.distancia}`}
+              >
                 <TableCell>{operario.nombre}</TableCell>
                 <TableCell>{formatExperimentTime(operario.tiempo)}</TableCell>
                 <TableCell>{formatNumber(operario.distancia, 2)} m</TableCell>
@@ -442,11 +546,60 @@ export default function RunDetailPage() {
                 <TableCell className="max-w-[420px] whitespace-normal break-words">
                   {formatRoute(operario.ruta)}
                 </TableCell>
+                <TableCell>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openRoutePreview(operario)}
+                  >
+                    Ver
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={isRouteDialogOpen} onOpenChange={setIsRouteDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Ruta del operario</DialogTitle>
+            <DialogDescription>
+              Visualizacion del recorrido en el grafico de distribucion con
+              trazado Manhattan (horizontal y luego vertical), incluyendo
+              salida y regreso al deposito.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedRouteJourney && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-blue-100 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                <p>
+                  {selectedRouteJourney.nombre} · {formatExperimentTime(selectedRouteJourney.tiempo)} · {formatNumber(selectedRouteJourney.distancia, 2)} m
+                </p>
+              </div>
+
+              {isDistributionLoading ? (
+                <p className="text-sm text-slate-500">Cargando distribucion...</p>
+              ) : distributionError ? (
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  {distributionError}
+                </p>
+              ) : selectedRouteJourney.ruta.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  No hay puntos de ruta para este viaje.
+                </p>
+              ) : distribution ? (
+                <RoutePreviewMap
+                  coordinates={distribution.coordinates}
+                  route={selectedRouteJourney.ruta}
+                />
+              ) : null}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {metricas.length > 0 && (
         <div className="overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
