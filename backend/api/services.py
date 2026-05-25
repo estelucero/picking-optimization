@@ -32,4 +32,4 @@ class ExperimentoService:
         )
 
         resultado = Experimentos(productos=productos, configuracion=configuracion).ejecutar()
-        return resultado.model_dump()
+        return resultado

@@ -20,6 +20,23 @@ import {
   type ExperimentRun,
 } from "@/lib/experimentos-rest";
 
+interface ExperimentChartResult {
+  operarios: number;
+  tiempo: number;
+  tiempo_promedio_por_operario?: Record<string, number>;
+}
+
+interface StoredExperimentResult {
+  resultados?: ExperimentChartResult[];
+}
+
+interface StoredExperiment {
+  id: string;
+  experimento_preview_id?: string;
+  created_at?: string;
+  resultado?: StoredExperimentResult;
+}
+
 function getBestRun(runs: ExperimentRun[]): ExperimentRun {
   return runs.reduce((best, run) => (run.totalTime < best.totalTime ? run : best), runs[0]);
 }
@@ -36,6 +53,7 @@ export default function ExperimentDetailPage() {
   const [experiment, setExperiment] = useState<ExperimentDetail | null>(null);
   const [runQuery, setRunQuery] = useState("");
   const [runSort, setRunSort] = useState("time-asc");
+  const [linkedChartData, setLinkedChartData] = useState<ExperimentChartResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,9 +65,10 @@ export default function ExperimentDetailPage() {
       setError(null);
 
       try {
-        const [experimentsResponse, runPreviewsResponse] = await Promise.all([
+        const [experimentsResponse, runPreviewsResponse, storedExperimentsResponse] = await Promise.all([
           fetch("/api/experimento_preview", { cache: "no-store" }),
           fetch(`/api/run_preview?experimento_preview_id=${params.experimentId}`, { cache: "no-store" }),
+          fetch("/api/experimentos", { cache: "no-store" }),
         ]);
 
         if (!experimentsResponse.ok) {
@@ -60,9 +79,14 @@ export default function ExperimentDetailPage() {
           throw new Error("No se pudieron obtener los run previews");
         }
 
+        if (!storedExperimentsResponse.ok) {
+          throw new Error("No se pudieron obtener los experimentos guardados");
+        }
+
         const previews = (await experimentsResponse.json()) as BackendExperimentoPreview[];
         const preview = previews.find((item) => item.id === params.experimentId);
         const runPreviews = (await runPreviewsResponse.json()) as BackendRunPreview[];
+        const storedExperiments = (await storedExperimentsResponse.json()) as StoredExperiment[];
 
         if (!preview) {
           throw new Error("No se encontro el experimento");
@@ -70,6 +94,16 @@ export default function ExperimentDetailPage() {
 
         if (!cancelled) {
           setExperiment(buildExperimentDetail(preview, runPreviews));
+
+          const linkedExperiment = storedExperiments
+            .filter((item) => item.experimento_preview_id === params.experimentId)
+            .sort((a, b) => {
+              const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+              const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+              return dateB - dateA;
+            })[0];
+
+          setLinkedChartData(linkedExperiment?.resultado?.resultados ?? []);
         }
       } catch (loadError) {
         console.error("Error loading experiment detail:", loadError);
@@ -97,11 +131,13 @@ export default function ExperimentDetailPage() {
 
   const chartData = useMemo(
     () =>
-      experiment?.operatorGroups.map((group) => ({
-        operarios: group.operatorCount,
-        tiempo: Number((group.runs.reduce((acc, run) => acc + run.totalTime, 0) / group.runs.length).toFixed(2)),
-      })) ?? [],
-    [experiment],
+      linkedChartData.length > 0
+        ? linkedChartData
+        : experiment?.operatorGroups.map((group) => ({
+            operarios: group.operatorCount,
+            tiempo: Number((group.runs.reduce((acc, run) => acc + run.totalTime, 0) / group.runs.length).toFixed(2)),
+          })) ?? [],
+    [experiment, linkedChartData],
   );
 
   const filteredRuns = useMemo(() => {

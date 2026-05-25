@@ -25,6 +25,8 @@ def _serialize_experimento(document: dict) -> dict:
     document["id"] = str(document.pop("_id"))
     if "ubicacion_id" in document and isinstance(document["ubicacion_id"], ObjectId):
         document["ubicacion_id"] = str(document["ubicacion_id"])
+    if "experimento_preview_id" in document and isinstance(document["experimento_preview_id"], ObjectId):
+        document["experimento_preview_id"] = str(document["experimento_preview_id"])
     return document
 
 
@@ -41,22 +43,27 @@ def run_experimento(payload: ExperimentoRunRequest):
 
     documento_experimento = {
         "ubicacion_id": ubicacion_object_id,
+        "experimento_preview_id": _to_object_id(
+        resultado["experimento_preview_id"],
+        "Invalid experimento preview id",
+        ),
         "parametros": payload.model_dump(),
-        "resultado": resultado,
+        "resultado": resultado["resultado"],
         "created_at": now,
     }
     inserted = experimentos_collection.insert_one(documento_experimento)
 
     return {
         "id": str(inserted.inserted_id),
+        "experimento_preview_id": resultado["experimento_preview_id"],
         "results": [
             {
                 "operarios": item["operarios"],
                 "tiempo": item["tiempo"],
             }
-            for item in resultado["resultados"]
+            for item in resultado["resultado"]["resultados"]
         ],
-        "resultado": resultado,
+        "resultado": resultado["resultado"],
     }
 
 

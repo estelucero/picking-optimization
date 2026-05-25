@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 interface SimulationResult {
   operarios: number;
   tiempo: number;
+  tiempo_promedio_por_operario?: Record<string, number>;
 }
 
 export function ResultsContent() {
