@@ -1,11 +1,11 @@
 'use client'
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface SimulationResult {
   operarios: number
   tiempo: number
+  tiempo_promedio_por_operario?: Record<string, number>
 }
 
 interface SimulationChartProps {
@@ -23,6 +23,62 @@ export function SimulationChart({
   yAxisLabel = 'Tiempo (minutos)',
   barName = 'Tiempo de Ejecución',
 }: SimulationChartProps) {
+  const hasStackedWorkerData = data.some(
+    (item) =>
+      item.tiempo_promedio_por_operario &&
+      Object.keys(item.tiempo_promedio_por_operario).length > 0
+  )
+
+  const workerKeys = hasStackedWorkerData
+    ? Array.from(
+        new Set(
+          data.flatMap((item) =>
+            Object.keys(item.tiempo_promedio_por_operario || {})
+          )
+        )
+      ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    : []
+
+  const workerColors = [
+    '#1d4ed8',
+    '#ea580c',
+    '#16a34a',
+    '#dc2626',
+    '#7c3aed',
+    '#0891b2',
+    '#ca8a04',
+    '#be123c',
+  ]
+
+  const renderStackedTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value?: number; name?: string; color?: string }>; label?: string | number }) => {
+    if (!active || !payload || payload.length === 0) {
+      return null
+    }
+
+    const activeSegment = payload.find((item) => Number(item?.value) > 0)
+
+    if (!activeSegment || typeof activeSegment.value !== 'number') {
+      return null
+    }
+
+    return (
+      <div
+        style={{
+          backgroundColor: '#ffffff',
+          border: '2px solid #3b82f6',
+          borderRadius: '0.75rem',
+          boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)',
+          padding: '10px 12px',
+        }}
+      >
+        <p style={{ color: '#0f172a', fontWeight: 600, marginBottom: '6px' }}>{label} operarios</p>
+        <p style={{ color: activeSegment.color || '#0f172a', fontWeight: 600 }}>
+          {activeSegment.name}: {activeSegment.value.toFixed(2)} min
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full">
       {isLoading ? (
@@ -51,6 +107,7 @@ export function SimulationChart({
               stroke="#bfdbfe"
             />
             <Tooltip
+              shared={false}
               contentStyle={{
                 backgroundColor: '#ffffff',
                 border: '2px solid #3b82f6',
@@ -59,19 +116,53 @@ export function SimulationChart({
               }}
               cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
               labelFormatter={(value) => `${value} operarios`}
-              formatter={(value: number) => [`${value.toFixed(2)} min`, 'Tiempo']}
+              content={hasStackedWorkerData ? renderStackedTooltip : undefined}
+              formatter={(value: number | string, name: string) => {
+                const numericValue = Number(value)
+
+                if (hasStackedWorkerData && numericValue <= 0) {
+                  return null
+                }
+
+                return [
+                  `${numericValue.toFixed(2)} min`,
+                  hasStackedWorkerData ? name : 'Tiempo',
+                ]
+              }}
             />
             <Legend 
               wrapperStyle={{ paddingTop: '20px' }}
               iconType="square"
             />
-            <Bar 
-              dataKey="tiempo" 
-              fill="#3b82f6" 
-              name={barName}
-              radius={[8, 8, 0, 0]}
-              animationDuration={800}
-            />
+            {hasStackedWorkerData ? (
+              workerKeys.map((workerKey, index) => {
+                const isTopSegment = index === workerKeys.length - 1
+
+                return (
+                  <Bar
+                    key={workerKey}
+                    dataKey={(item: SimulationResult) =>
+                      item.tiempo_promedio_por_operario?.[workerKey] || 0
+                    }
+                    stackId="tiempo-operarios"
+                    fill={workerColors[index % workerColors.length]}
+                    name={workerKey}
+                    stroke="#ffffff"
+                    strokeWidth={1}
+                    radius={isTopSegment ? [8, 8, 0, 0] : [0, 0, 0, 0]}
+                    animationDuration={800}
+                  />
+                )
+              })
+            ) : (
+              <Bar
+                dataKey="tiempo"
+                fill="#3b82f6"
+                name={barName}
+                radius={[8, 8, 0, 0]}
+                animationDuration={800}
+              />
+            )}
           </BarChart>
         </ResponsiveContainer>
       )}

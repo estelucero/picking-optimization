@@ -67,7 +67,8 @@ export function ExperimentRunPanel({
       }
 
       const data = await response.json();
-      const resultsParam = btoa(JSON.stringify(data.results || []));
+      const chartResults = data?.resultado?.resultados ?? data?.results ?? [];
+      const resultsParam = btoa(JSON.stringify(chartResults));
       router.push(`/experimentation/results?data=${resultsParam}`);
     } catch (error) {
       console.error("Error durante la simulación:", error);
