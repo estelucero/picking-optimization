@@ -22,11 +22,21 @@ async function proxyRequest(path: string, init?: RequestInit): Promise<Response>
   throw lastError || new Error("No backend URL available")
 }
 
+function normalizeUbicacion(item: Record<string, unknown>) {
+  return {
+    ...item,
+    id: item.id ?? item._id,
+  }
+}
+
 export async function GET() {
   try {
     const response = await proxyRequest("/ubicaciones/")
     const data = await response.json()
-    return NextResponse.json(data, { status: response.status })
+    return NextResponse.json(
+      Array.isArray(data) ? data.map((item) => normalizeUbicacion(item as Record<string, unknown>)) : data,
+      { status: response.status },
+    )
   } catch (error) {
     console.error("Error fetching ubicaciones:", error)
     return NextResponse.json({ error: "No se pudieron obtener ubicaciones" }, { status: 500 })
@@ -45,7 +55,7 @@ export async function POST(request: NextRequest) {
     })
 
     const data = await response.json()
-    return NextResponse.json(data, { status: response.status })
+    return NextResponse.json(normalizeUbicacion(data), { status: response.status })
   } catch (error) {
     console.error("Error creating ubicacion:", error)
     return NextResponse.json({ error: "No se pudo guardar la ubicacion" }, { status: 500 })
