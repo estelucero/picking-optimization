@@ -63,7 +63,7 @@ class Experimentos:
         if not self._productos_sin_deposito:
             raise ValueError("Se requiere al menos un producto distinto del deposito")
 
-    def ejecutar(self) -> ResultadoExperimentos:
+    def ejecutar(self) -> dict:
         rng = np.random.default_rng(self._configuracion.seed)
 
         ubicaciones = Ubicaciones(productos=self._productos)
@@ -202,12 +202,16 @@ class Experimentos:
                 )
             )
 
-        return ResultadoExperimentos(
+        resultados_experimentos = ResultadoExperimentos(
             resultados=resultados,
             iteraciones=self._configuracion.iteraciones,
             media_pedidos_mes=self._configuracion.media_pedidos_mes,
             media_tamano_pedido=self._configuracion.media_tamano_pedido,
         )
+        return {
+            "experimento_preview_id": created_experimento_preview["id"],
+            "resultado": resultados_experimentos.model_dump()
+        }
     
     def _transformar_muestra_promedio(self, muestras:list[dict[str,float]]) -> dict[str,float]:
         acumulado = {}
