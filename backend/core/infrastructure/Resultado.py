@@ -18,7 +18,13 @@ class Resultado(BaseModel):
 
     tiempo_minimo: float = Field(..., gt=0, description="Tiempo total de caminos mínimos en minutos")
     asignacion: Dict[Operario, List[Viaje]]
+    tiempo_por_operario: Dict[str,float] = Field(default_factory=dict, description="Suma de lo que tardo en total cada operario")
     
+    def model_post_init(self, __context) -> None:
+        self.tiempo_por_operario = {
+            operario.nombre: sum(viaje.tiempo for viaje in viajes)
+            for operario, viajes in self.asignacion.items()
+        }
 
     def __repr__(self) -> str:
         return (

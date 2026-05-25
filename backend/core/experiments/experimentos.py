@@ -38,6 +38,7 @@ class ResultadoOperario(BaseModel):
     tiempo_maximo: float
     desvio_std: float
     muestras: int
+    tiempo_promedio_por_operario: dict[str,float]
 
 
 class ResultadoExperimentos(BaseModel):
@@ -69,10 +70,6 @@ class Experimentos:
         tsp = TSP(grafo=ubicaciones, deposito=self._configuracion.deposito)
         modelo = Modelo(tsp=tsp)
 
-        tiempos_por_operario: dict[int, list[float]] = {
-            cantidad_operarios: []
-            for cantidad_operarios in range(1, self._configuracion.max_operarios + 1)
-        }
 
         #TODO:crear experimento preview
         experiemento_preview = ExperimentoPreview(nombre="pendiente",
@@ -83,8 +80,13 @@ class Experimentos:
                            estado="creado")
         created_experimento_preview = create_experimento_preview(experiemento_preview)
 
+        #* Primera clave la cantidad de n operarios, segunda clave el nombre del operario y cuanto tardo, si dice clave total es el tiempo minimo de la run 
+        tiempos_por_operario: dict[int, list[dict[str,float]]] = {
+            cantidad_operarios: []
+            for cantidad_operarios in range(1, self._configuracion.max_operarios + 1)
+        }
         numero_run = 0
-        #Itero cantidad de runs por operario
+        #Itero cantidad de runs con iguales pedidos, esto es que se genera una lista de pedidos y los itero con n cantidad de operarios
         for indice_iteracion in range(self._configuracion.iteraciones):
             #Genero pedidos
             pedidos = self._generar_pedidos_poisson(rng, indice_iteracion)
@@ -113,7 +115,7 @@ class Experimentos:
                 pedido_models.append(pedido_model)
 
 
-            #Itero numero de operarios
+            #Itero numero de operarios incrementalmente, o sea primero ese pedido con 1 operario, luego con 2..
             for cantidad_operarios in range(1, self._configuracion.max_operarios + 1):
                 operarios = self._crear_operarios(cantidad_operarios)
                 #Resuelve el modelo
@@ -122,7 +124,9 @@ class Experimentos:
                     operarios,
                     beta_picking=self._configuracion.beta_picking,
                 )
-                tiempos_por_operario[cantidad_operarios].append(resultado.tiempo_minimo)
+                tiempos_run_discriminada = resultado.tiempo_por_operario.copy()
+                tiempos_run_discriminada["total"] = resultado.tiempo_minimo
+                tiempos_por_operario[cantidad_operarios].append(tiempos_run_discriminada)
 
                 #Genero Run preview y Run
 
@@ -180,16 +184,21 @@ class Experimentos:
 
         resultados = []
         for cantidad_operarios, muestras in tiempos_por_operario.items():
-            tiempo_promedio = float(np.mean(muestras))
+            muestra_promedio = self._transformar_muestra_promedio(muestras)
+            
+            tiempo_por_operario = {operario: promedio for operario, promedio in muestra_promedio.items() if operario != "total"}
+            tiempo_totales_muestras = [muestra["total"] for muestra in muestras]
+            tiempo_promedio = float(np.mean(tiempo_totales_muestras))
             resultados.append(
                 ResultadoOperario(
                     operarios=cantidad_operarios,
                     tiempo=round(tiempo_promedio, 3),
                     tiempo_promedio=round(tiempo_promedio, 3),
-                    tiempo_minimo=round(float(np.min(muestras)), 3),
-                    tiempo_maximo=round(float(np.max(muestras)), 3),
-                    desvio_std=round(float(np.std(muestras)), 3),
-                    muestras=len(muestras),
+                    tiempo_minimo=round(float(np.min(tiempo_totales_muestras)), 3),
+                    tiempo_maximo=round(float(np.max(tiempo_totales_muestras)), 3),
+                    desvio_std=round(float(np.std(tiempo_totales_muestras)), 3),
+                    muestras=len(tiempo_totales_muestras),
+                    tiempo_promedio_por_operario=tiempo_por_operario
                 )
             )
 
@@ -199,6 +208,21 @@ class Experimentos:
             media_pedidos_mes=self._configuracion.media_pedidos_mes,
             media_tamano_pedido=self._configuracion.media_tamano_pedido,
         )
+    
+    def _transformar_muestra_promedio(self, muestras:list[dict[str,float]]) -> dict[str,float]:
+        acumulado = {}
+        for muestra in muestras:
+            for operario, tiempo in muestra.items():
+                if operario == "total":
+                    continue
+                acumulado.setdefault(operario, []).append(tiempo)
+        
+        promedio_por_operario = {
+            nombre: round(float(np.mean(tiempos)), 3)
+            for nombre, tiempos in acumulado.items()
+        }
+        
+        return promedio_por_operario
 
     def _generar_pedidos_poisson(
         self,
