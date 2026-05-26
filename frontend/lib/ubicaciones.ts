@@ -1,10 +1,29 @@
 export interface Coordinate {
-  id: number
-  x: number
-  y: number
-  name: string
-  weight?: number
-  isDeposit?: boolean
+id: number
+x: number
+y: number
+name: string
+weight?: number
+isDeposit?: boolean
+aisle?: number
+row?: number
+shelfIndex?: number
+slotSide?: "top" | "bottom"
+slotIndex?: number
+}
+
+export interface WarehouseConfig {
+warehouseWidth: number
+warehouseHeight: number
+numAisles: number
+numRows: number
+shelvesBetweenStreets: number
+verticalStreetWidth: number
+verticalStreetHeight: number
+horizontalStreetWidth: number
+horizontalStreetHeight: number
+shelfWidth: number
+shelfPlacementMode: "both" | "top" | "bottom"
 }
 
 export interface ProductMapping {
