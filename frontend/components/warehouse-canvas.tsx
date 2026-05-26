@@ -77,7 +77,7 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     const shelvesBetweenVertical = Math.max(1, config.shelvesBetweenStreets);
 
     const shelfCols = (verticalStreets + 1) * shelvesBetweenVertical;
-    const shelfRows = horizontalStreets + 1;
+    const shelfRows = Math.max(1, horizontalStreets - 1);
 
     const usableW = CANVAS_WIDTH - PADDING * 2;
     const usableH = CANVAS_HEIGHT - PADDING * 2;
@@ -124,7 +124,7 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
             col,
             row,
             x: xCursor,
-            y: l.startY + row * l.shelfH + row * l.hStreetH,
+            y: l.startY + l.hStreetH + row * l.shelfH + row * l.hStreetH,
             w: l.shelfW,
             h: l.shelfH,
           });
@@ -174,9 +174,9 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(l.startX - 8, l.startY - 8, l.gridW + 16, l.gridH + 16);
 
-    // Horizontal streets: exactly H
+    // Horizontal streets: exactly H, including top and bottom borders
     for (let r = 0; r < l.horizontalStreets; r++) {
-      const y = l.startY + (r + 1) * l.shelfH + r * l.hStreetH;
+      const y = l.startY + r * (l.shelfH + l.hStreetH);
       ctx.fillStyle = "#bbf7d0";
       ctx.fillRect(l.startX, y, l.gridW, l.hStreetH);
     }
