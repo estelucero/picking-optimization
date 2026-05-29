@@ -124,6 +124,31 @@ class Ubicaciones(Grafo):
 
         return bloque_origen == bloque_destino
 
+    def _intersecciones_vecinas(
+            self,
+            producto: Producto,
+            intersec: list[Coordenada]
+    ) -> list[Coordenada]:
+
+        separacion = self.estanterias_por_calle + 1
+
+        bloque = producto.x // separacion
+
+        calle_izquierda = bloque * separacion - 1
+        calle_derecha = bloque * separacion + self.estanterias_por_calle
+
+        resultado = []
+
+        for i in intersec:
+
+            if i.y != producto.y:
+                continue
+
+            if i.x == calle_izquierda or i.x == calle_derecha:
+                resultado.append(i)
+
+        return resultado
+
     def _mejor_interseccion(
             self,
             producto: Producto,
@@ -131,15 +156,17 @@ class Ubicaciones(Grafo):
             intersec: list[Coordenada]
     ) -> Coordenada:
 
-        intersecciones = [
-            i
-            for i in intersec
-            if i.y == producto.y
-        ]
+        vecinas = self._intersecciones_vecinas(
+            producto,
+            intersec
+        )
 
         return min(
-            intersecciones,
-            key=lambda inter: self._manhattan_Prod_Coord(objetivo,inter )
+            vecinas,
+            key=lambda inter: self._manhattan_Prod_Coord(
+                objetivo,
+                inter
+            )
         )
 
     def generar_intersecciones(
