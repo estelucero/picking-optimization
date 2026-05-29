@@ -27,14 +27,20 @@ def _to_object_id(ubicacion_id: str) -> ObjectId:
         raise HTTPException(status_code=400, detail="Invalid ubicacion id") from exc
 
 
-def _validar_con_core(productos_payload) -> None:
-    productos = [Producto(**producto.model_dump()) for producto in productos_payload]
-    CoreUbicaciones(productos=productos)
+def _validar_con_core(ubicacion) -> None:
+    productos = [Producto(**producto.model_dump()) for producto in ubicacion.productos]
+
+    doc = ubicacion.model_dump()
+
+    CoreUbicaciones(productos=productos,
+                    calles_verticales=doc["calles_verticales"],
+                    calles_horizontales=doc["calles_horizontales"],
+                    estanterias_por_calle=doc["estanterias_por_calle"])
 
 
 @router.post("/")
 def create_ubicacion(ubicacion: UbicacionCreate):
-    _validar_con_core(ubicacion.productos)
+    _validar_con_core(ubicacion)
 
     now = datetime.now(timezone.utc)
     document = ubicacion.model_dump()

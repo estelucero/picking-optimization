@@ -5,8 +5,7 @@ from ..interfaces.Grafo import Grafo
 from ..utils.UnidadDistancia import UnidadDistancia
 
 
-class Interseccion:
-    id: str
+class Coordenada(BaseModel):
     x: int
     y: int
 
@@ -31,6 +30,9 @@ class Ubicaciones(Grafo):
         min_length=1, 
         description="Lista no vacía de productos para construir el grafo"
     )
+    calles_verticales: int = Field(..., gt=0)
+    calles_horizontales: int = Field(..., gt=0)
+    estanterias_por_calle: int = Field(..., gt=0)
 
     # Atributos internos que no se serializan ni exponen en el schema
     _productos: dict[str, Producto] = PrivateAttr(default_factory=dict)
@@ -48,6 +50,10 @@ class Ubicaciones(Grafo):
         self._productos = {p.codigo: p for p in self.productos}
         self._distancias = {}
 
+        intersecciones: list[Coordenada] = self.generar_intersecciones(calles_verticales=self.calles_verticales,
+                                                                       calles_horizontales=self.calles_horizontales,
+                                                                       estanterias_por_calle=self.estanterias_por_calle)
+
         for origen in self.productos:
             self._distancias[origen.codigo] = {}
             for destino in self.productos:
@@ -58,30 +64,33 @@ class Ubicaciones(Grafo):
 
                     metros = 0
 
+                    #TODO: revisar logica de si estan en el mismo pasillo
                     #Si estan en el mismo pasillo
-                    if(origen.x == destino.x and origen.y == destino.y):
+                    if self.mismo_pasillo(origen, destino):
                         metros = self._manhattan(origen, destino)
                     else:
                         #Buscar interseccion mas conveniente
 
                         inter_origen = self._mejor_interseccion(
                             producto=origen,
-                            objetivo=destino
+                            objetivo=destino,
+                            intersec=intersecciones
                         )
 
                         inter_destino = self._mejor_interseccion(
                             producto=destino,
-                            objetivo=origen
+                            objetivo=origen,
+                            intersec=intersecciones
                         )
 
                         #distancia entre origen y mejor interseccion
-                        d1 = self._manhattan(origen, inter_origen)
+                        d1 = self._manhattan_Prod_Coord(origen, inter_origen)
 
                         #distancia entre intersecciones
-                        d2 = self._manhattan(inter_origen, inter_destino)
+                        d2 = self._manhattan_Coord_Coord(inter_origen, inter_destino)
 
                         #distancia entre interseccion y destino
-                        d3 = self._manhattan(inter_destino, destino)
+                        d3 = self._manhattan_Prod_Coord(destino, inter_destino)
 
                         metros = d1 + d2 + d3
 
@@ -92,28 +101,53 @@ class Ubicaciones(Grafo):
     def _manhattan(self, origen: Producto, destino: Producto) -> float:
         return abs(origen.x - destino.x) + abs(origen.y - destino.y)
 
+    def _manhattan_Prod_Coord(self, origen: Producto, destino: Coordenada) -> float:
+        return abs(origen.x - destino.x) + abs(origen.y - destino.y)
+
+    def _manhattan_Coord_Coord(self, origen: Coordenada, destino: Coordenada) -> float:
+        return abs(origen.x - destino.x) + abs(origen.y - destino.y)
+
+    def mismo_pasillo(
+            self,
+            origen: Producto,
+            destino: Producto
+    ) -> bool:
+
+        # Deben estar en la misma fila
+        if origen.y != destino.y:
+            return False
+
+        separacion = self.estanterias_por_calle + 1
+
+        bloque_origen = origen.x // separacion
+        bloque_destino = destino.x // separacion
+
+        return bloque_origen == bloque_destino
+
     def _mejor_interseccion(
             self,
             producto: Producto,
-            objetivo: Producto
-    ) -> Interseccion:
+            objetivo: Producto,
+            intersec: list[Coordenada]
+    ) -> Coordenada:
 
         intersecciones = [
             i
-            for i in self.intersecciones
+            for i in intersec
             if i.y == producto.y
         ]
 
         return min(
             intersecciones,
-            key=lambda inter: self._manhattan(inter, objetivo)
+            key=lambda inter: self._manhattan_Prod_Coord(objetivo,inter )
         )
 
     def generar_intersecciones(
+            self,
             calles_verticales: int,
             calles_horizontales: int,
             estanterias_por_calle: int
-    ) -> list[Interseccion]:
+    ) -> list[Coordenada]:
 
         separacion = estanterias_por_calle + 1
 
@@ -121,13 +155,15 @@ class Ubicaciones(Grafo):
 
         for vx in range(calles_verticales):
 
+            # calle vertical
             x = vx * separacion + estanterias_por_calle
 
             for hy in range(calles_horizontales):
-                y = hy * separacion + estanterias_por_calle
+                # calle horizontal
+                y = hy * 1
 
                 intersecciones.append(
-                    Interseccion(x=x, y=y)
+                    Coordenada(x=x, y=y)
                 )
 
         return intersecciones
