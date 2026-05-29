@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { SimulationChart } from "@/components/simulation-chart";
 import {
   buildExperimentDetail,
@@ -54,6 +55,7 @@ export default function ExperimentDetailPage() {
   const [runQuery, setRunQuery] = useState("");
   const [runSort, setRunSort] = useState("time-asc");
   const [linkedChartData, setLinkedChartData] = useState<ExperimentChartResult[]>([]);
+  const [chartViewMode, setChartViewMode] = useState<"minimo" | "total">("minimo");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -237,15 +239,52 @@ export default function ExperimentDetailPage() {
       <div className="overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <div className="border-b border-blue-100 bg-white px-5 py-3 dark:border-slate-700 dark:bg-slate-900">
           <p className="text-sm font-semibold text-slate-900 dark:text-white">Grafico</p>
-          <p className="text-sm text-slate-500">Tiempo promedio vs cantidad de operarios</p>
+          <p className="text-sm text-slate-500">Comparativa por cantidad de operarios</p>
         </div>
         <div className="p-4">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              {chartViewMode === "minimo"
+                ? "Minimo tiempo: maximo tiempo promedio entre operarios por cada n"
+                : "Total: tiempo total por cada n de operarios"}
+            </p>
+            <ToggleGroup
+              type="single"
+              value={chartViewMode}
+              onValueChange={(value) => {
+                if (value === "minimo" || value === "total") {
+                  setChartViewMode(value);
+                }
+              }}
+              variant="outline"
+              size="default"
+              className="rounded-lg border border-blue-300 bg-blue-50/60 dark:border-blue-400/40 dark:bg-blue-500/10"
+            >
+              <ToggleGroupItem
+                value="minimo"
+                className="px-5 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 data-[state=on]:bg-blue-500 data-[state=on]:text-white"
+              >
+                Mínimo Tiempo
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="total"
+                className="px-5 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 data-[state=on]:bg-blue-500 data-[state=on]:text-white"
+              >
+                Total
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
           <SimulationChart
             data={chartData}
             isLoading={false}
             xAxisLabel="Operarios"
-            yAxisLabel="Tiempo promedio (minutos)"
-            barName="Tiempo promedio"
+            yAxisLabel={
+              chartViewMode === "minimo"
+                ? "Maximo tiempo promedio por operario (min)"
+                : "Tiempo total (min)"
+            }
+            barName={chartViewMode === "minimo" ? "Minimo tiempo" : "Total"}
+            viewMode={chartViewMode}
           />
         </div>
       </div>

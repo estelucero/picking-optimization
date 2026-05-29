@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { SimulationChart } from "@/components/simulation-chart";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ChevronLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -17,6 +18,7 @@ export function ResultsContent() {
   const router = useRouter();
   const [results, setResults] = useState<SimulationResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [chartViewMode, setChartViewMode] = useState<"minimo" | "total">("minimo");
 
   useEffect(() => {
     try {
@@ -69,7 +71,49 @@ export function ResultsContent() {
       </div>
 
       <div className="bg-white dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-2xl p-8 shadow-lg">
-        <SimulationChart data={results} isLoading={isLoading} />
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            {chartViewMode === "minimo"
+              ? "Minimo tiempo: maximo tiempo promedio entre operarios por cada n"
+              : "Total: tiempo total por cada n de operarios"}
+          </p>
+          <ToggleGroup
+            type="single"
+            value={chartViewMode}
+            onValueChange={(value) => {
+              if (value === "minimo" || value === "total") {
+                setChartViewMode(value);
+              }
+            }}
+            variant="outline"
+            size="default"
+            className="rounded-lg border border-blue-300 bg-blue-50/60 dark:border-blue-400/40 dark:bg-blue-500/10"
+          >
+            <ToggleGroupItem
+              value="minimo"
+              className="px-5 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 data-[state=on]:bg-blue-500 data-[state=on]:text-white"
+            >
+              Mínimo Tiempo
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="total"
+              className="px-5 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 data-[state=on]:bg-blue-500 data-[state=on]:text-white"
+            >
+              Total
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+        <SimulationChart
+          data={results}
+          isLoading={isLoading}
+          viewMode={chartViewMode}
+          yAxisLabel={
+            chartViewMode === "minimo"
+              ? "Maximo tiempo promedio por operario (min)"
+              : "Tiempo total (min)"
+          }
+          barName={chartViewMode === "minimo" ? "Minimo tiempo" : "Total"}
+        />
       </div>
 
       {!isLoading && results.length > 0 && (
