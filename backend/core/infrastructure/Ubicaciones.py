@@ -39,6 +39,10 @@ class Ubicaciones(Grafo):
     #* Matriz de distancia de x producto a y producto
     _distancias: dict[str, dict[str, UnidadDistancia]] = PrivateAttr(default_factory=dict)
 
+    ancho_estanteria: float = 1.0
+    ancho_calle: float = 2.0
+    alto_calle_vertical: float = 4
+
     @model_validator(mode='after')
     def _validar_y_construir(self) -> Self:
         # 1. Validar códigos únicos
@@ -84,19 +88,61 @@ class Ubicaciones(Grafo):
                         )
 
                         #distancia entre origen y mejor interseccion
-                        d1 = self._manhattan_Prod_Coord(origen, inter_origen)
+                        d1 = self.distancia_real(origen, inter_origen)
 
-                        #distancia entre intersecciones
-                        d2 = self._manhattan_Coord_Coord(inter_origen, inter_destino)
+                        #Distancia entre la interseccion y el destino
+                        d2 = self.distancia_real(destino, inter_origen)
 
-                        #distancia entre interseccion y destino
-                        d3 = self._manhattan_Prod_Coord(destino, inter_destino)
-
-                        metros = d1 + d2 + d3
+                        metros = d1 + d2
 
                     self._distancias[origen.codigo][destino.codigo] = UnidadDistancia(metros=metros)
                     
         return self
+
+    def posicion_real_x(self, x_logico: float) -> float:
+
+        separacion = self.estanterias_por_calle + 1
+
+        bloque = x_logico // separacion
+
+        offset = x_logico % separacion
+
+        distancia = (
+                bloque * (
+                self.estanterias_por_calle * self.ancho_estanteria
+                + self.ancho_calle
+        )
+        )
+
+        # si estamos sobre estanterías
+        if offset < self.estanterias_por_calle:
+            distancia += offset * self.ancho_estanteria
+
+        # si estamos sobre calle
+        else:
+            distancia += (
+                    self.estanterias_por_calle
+                    * self.ancho_estanteria
+            )
+
+        return distancia
+
+    def posicion_real_y(self, y_logico: float) -> float:
+
+        return (
+                y_logico
+                * self.alto_calle_vertical
+        )
+
+    def distancia_real(self, producto_a: Producto, interseccion: Coordenada) -> float:
+
+        ax = self.posicion_real_x(producto_a.x)
+        ay = self.posicion_real_y(producto_a.y)
+
+        bx = self.posicion_real_x(interseccion.x)
+        by = self.posicion_real_y(interseccion.y)
+
+        return abs(ax - bx) + abs(ay - by)
 
     def _manhattan(self, origen: Producto, destino: Producto) -> float:
         return abs(origen.x - destino.x) + abs(origen.y - destino.y)
