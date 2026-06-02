@@ -107,25 +107,40 @@ class Ubicaciones(Grafo):
 
         offset = x_logico % separacion
 
-        distancia = (
-                bloque * (
-                self.estanterias_por_calle * self.ancho_estanteria
-                + self.ancho_calle
-        )
+        ancho_bloque = (
+                self.estanterias_por_calle
+                * self.ancho_estanteria
         )
 
-        # si estamos sobre estanterías
+        inicio_bloque = (
+                bloque
+                * (
+                        ancho_bloque
+                        + self.ancho_calle
+                )
+        )
+
+        # Producto/picking
         if offset < self.estanterias_por_calle:
-            distancia += offset * self.ancho_estanteria
 
-        # si estamos sobre calle
-        else:
-            distancia += (
-                    self.estanterias_por_calle
-                    * self.ancho_estanteria
+            return (
+                    inicio_bloque
+                    +
+                    (offset * self.ancho_estanteria)
+                    +
+                    (self.ancho_estanteria / 2)
             )
 
-        return distancia
+        # Calle/intersección
+        else:
+
+            return (
+                    inicio_bloque
+                    +
+                    ancho_bloque
+                    +
+                    (self.ancho_estanteria / 2)
+            )
 
     def posicion_real_y(self, y_logico: float) -> float:
 
