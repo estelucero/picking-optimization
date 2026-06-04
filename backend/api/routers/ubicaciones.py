@@ -45,6 +45,7 @@ def create_ubicacion(ubicacion: UbicacionCreate):
     now = datetime.now(timezone.utc)
     document = ubicacion.model_dump()
     document["distancias"] = grafo.model_dump()["distancias"]
+    document["caminos"] = grafo.model_dump()["caminos"]
     document["created_at"] = now
     document["updated_at"] = now
 
@@ -80,12 +81,11 @@ def update_ubicacion(ubicacion_id: str, payload: UbicacionUpdate):
     if not existing:
         raise HTTPException(status_code=404, detail="Ubicacion not found")
 
-    _validar_con_core(payload.productos)
-
     now = datetime.now(timezone.utc)
     grafo = crear_grafo(payload)
     update_document = payload.model_dump()
     update_document["distancias"] = grafo.model_dump()["distancias"]
+    update_document["caminos"] = grafo.model_dump()["caminos"]
     update_document["updated_at"] = now
     update_document["created_at"] = existing.get("created_at", now)
 

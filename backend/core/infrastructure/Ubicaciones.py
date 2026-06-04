@@ -42,6 +42,7 @@ class Ubicaciones(Grafo):
     ancho_estanteria: float = 1.0
     ancho_calle_horizontal: float = 2.0
     alto_calle_vertical: float = 4
+    _caminos: dict[str, dict[str, list[Coordenada]]] = PrivateAttr(default_factory=dict)
 
     @model_validator(mode='after')
     def _validar_y_construir(self) -> Self:
@@ -52,6 +53,7 @@ class Ubicaciones(Grafo):
 
         # 2. Construir estructuras internas
         self._productos = {p.codigo: p for p in self.productos}
+        self._caminos = {p.codigo: {} for p in self.productos}
         self._distancias = {}
 
         intersecciones: list[Coordenada] = self.generar_intersecciones(calles_verticales=self.calles_verticales,
@@ -71,6 +73,7 @@ class Ubicaciones(Grafo):
                     #Si estan en el mismo pasillo
                     if self.mismo_pasillo(origen, destino):
                         metros = self.distancia_real_productos(origen, destino)
+                        camino = self.camino_mismo_pasillo(origen, destino)
                     else:
                         #Buscar interseccion mas conveniente
 
@@ -82,15 +85,44 @@ class Ubicaciones(Grafo):
 
                         #distancia entre origen y mejor interseccion
                         d1 = self.distancia_real(origen, inter_origen)
-
+                        camino_interseccion = self.camino_producto_coordenada(origen, inter_origen)
                         #Distancia entre la interseccion y el destino
                         d2 = self.distancia_real(destino, inter_origen)
-
+                        camino_interseccion_destino = self.camino_producto_coordenada(destino, inter_origen)
                         metros = d1 + d2
+                        camino = camino_interseccion + camino_interseccion_destino
 
                     self._distancias[origen.codigo][destino.codigo] = UnidadDistancia(metros=metros)
+                    self._caminos[origen.codigo][destino.codigo] = camino.copy()
                     
         return self
+
+    def camino_mismo_pasillo(self, origen: Producto, destino: Producto) -> list[Coordenada]:
+        output = []
+        cordenada_origen = Coordenada(x=origen.x,y=origen.y)
+        cordenada_destino = Coordenada(x=destino.x,y=destino.y)
+        output.append(cordenada_origen)
+        output.append(cordenada_destino)
+        return output
+    
+    def camino_producto_coordenada(self, producto: Producto, coordenada: Coordenada) -> list[Coordenada]:
+        output = []
+        #Es origen a interseccion ya que comparten fila
+        if coordenada.y == producto.y:
+            cordenada_origen = Coordenada(x=producto.x,y=producto.y)
+            output.append(cordenada_origen)
+            output.append(coordenada)
+            return output
+        
+        #Es destino a interseccion, 
+        coordenada_destino = Coordenada(x=producto.x,y=producto.y)
+        coordenada_fila_destino = Coordenada(x=coordenada.x,y=producto.y)
+        #No pongo cordenada ya que sino se repetiria la cordenada de interseccion
+        output.append(coordenada_fila_destino)
+        output.append(coordenada_destino)
+        return output
+
+
 
     def posicion_real_x(self, x_logico: float) -> float:
 
@@ -248,3 +280,8 @@ class Ubicaciones(Grafo):
     @property
     def distancias(self) -> dict[str, dict[str, UnidadDistancia]]:
         return self._distancias
+
+    @computed_field
+    @property
+    def caminos(self) -> dict[str, dict[str, list[Coordenada]]]:
+        return self._caminos
