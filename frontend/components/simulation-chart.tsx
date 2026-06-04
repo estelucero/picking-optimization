@@ -14,6 +14,7 @@ interface SimulationChartProps {
   xAxisLabel?: string
   yAxisLabel?: string
   barName?: string
+  viewMode?: 'minimo' | 'total'
 }
 
 export function SimulationChart({
@@ -22,14 +23,15 @@ export function SimulationChart({
   xAxisLabel = 'Cantidad de Operarios',
   yAxisLabel = 'Tiempo (minutos)',
   barName = 'Tiempo de Ejecución',
+  viewMode = 'minimo',
 }: SimulationChartProps) {
-  const hasStackedWorkerData = data.some(
+  const hasWorkerAverageData = data.some(
     (item) =>
       item.tiempo_promedio_por_operario &&
       Object.keys(item.tiempo_promedio_por_operario).length > 0
   )
 
-  const workerKeys = hasStackedWorkerData
+  const workerKeys = hasWorkerAverageData
     ? Array.from(
         new Set(
           data.flatMap((item) =>
@@ -38,6 +40,20 @@ export function SimulationChart({
         )
       ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
     : []
+
+  const chartData = data.map((item) => {
+    if (viewMode === 'total') {
+      return item
+    }
+
+    const workerValues = Object.values(item.tiempo_promedio_por_operario || {})
+    const maxAverageWorkerTime = workerValues.length > 0 ? Math.max(...workerValues) : item.tiempo
+
+    return {
+      ...item,
+      tiempo: maxAverageWorkerTime,
+    }
+  })
 
   const workerColors = [
     '#1d4ed8',
@@ -93,7 +109,7 @@ export function SimulationChart({
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={400}>
-          <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#bfdbfe" />
             <XAxis 
               dataKey="operarios" 
@@ -116,17 +132,17 @@ export function SimulationChart({
               }}
               cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
               labelFormatter={(value) => `${value} operarios`}
-              content={hasStackedWorkerData ? renderStackedTooltip : undefined}
+              content={viewMode === 'total' && hasWorkerAverageData ? renderStackedTooltip : undefined}
               formatter={(value: number | string, name: string) => {
                 const numericValue = Number(value)
 
-                if (hasStackedWorkerData && numericValue <= 0) {
+                if (viewMode === 'total' && hasWorkerAverageData && numericValue <= 0) {
                   return null
                 }
 
                 return [
                   `${numericValue.toFixed(2)} min`,
-                  hasStackedWorkerData ? name : 'Tiempo',
+                  viewMode === 'total' && hasWorkerAverageData ? name : 'Tiempo',
                 ]
               }}
             />
@@ -134,7 +150,7 @@ export function SimulationChart({
               wrapperStyle={{ paddingTop: '20px' }}
               iconType="square"
             />
-            {hasStackedWorkerData ? (
+            {viewMode === 'total' && hasWorkerAverageData ? (
               workerKeys.map((workerKey, index) => {
                 const isTopSegment = index === workerKeys.length - 1
 
