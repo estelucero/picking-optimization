@@ -40,7 +40,7 @@ class Ubicaciones(Grafo):
     _distancias: dict[str, dict[str, UnidadDistancia]] = PrivateAttr(default_factory=dict)
 
     ancho_estanteria: float = 1.0
-    ancho_calle: float = 2.0
+    ancho_calle_horizontal: float = 2.0
     alto_calle_vertical: float = 4
 
     @model_validator(mode='after')
@@ -68,7 +68,6 @@ class Ubicaciones(Grafo):
 
                     metros = 0
 
-                    #TODO: revisar logica de si estan en el mismo pasillo
                     #Si estan en el mismo pasillo
                     if self.mismo_pasillo(origen, destino):
                         metros = self._manhattan(origen, destino)
@@ -76,14 +75,8 @@ class Ubicaciones(Grafo):
                         #Buscar interseccion mas conveniente
 
                         inter_origen = self._mejor_interseccion(
-                            producto=origen,
-                            objetivo=destino,
-                            intersec=intersecciones
-                        )
-
-                        inter_destino = self._mejor_interseccion(
-                            producto=destino,
-                            objetivo=origen,
+                            origen=origen,
+                            destino=destino,
                             intersec=intersecciones
                         )
 
@@ -107,47 +100,21 @@ class Ubicaciones(Grafo):
 
         offset = x_logico % separacion
 
-        ancho_bloque = (
-                self.estanterias_por_calle
-                * self.ancho_estanteria
-        )
+        ancho_bloque = ( self.estanterias_por_calle * self.ancho_estanteria )
 
-        inicio_bloque = (
-                bloque
-                * (
-                        ancho_bloque
-                        + self.ancho_calle
-                )
-        )
+        inicio_bloque = ( bloque * ( ancho_bloque + self.ancho_calle_horizontal ) )
 
         # Producto/picking
         if offset < self.estanterias_por_calle:
 
-            return (
-                    inicio_bloque
-                    +
-                    (offset * self.ancho_estanteria)
-                    +
-                    (self.ancho_estanteria / 2)
-            )
-
+            return ( inicio_bloque + (offset * self.ancho_estanteria) + (self.ancho_estanteria / 2) )
         # Calle/intersección
         else:
-
-            return (
-                    inicio_bloque
-                    +
-                    ancho_bloque
-                    +
-                    (self.ancho_estanteria / 2)
-            )
+            return ( inicio_bloque + ancho_bloque + (self.ancho_calle_horizontal / 2) )
 
     def posicion_real_y(self, y_logico: float) -> float:
 
-        return (
-                y_logico
-                * self.alto_calle_vertical
-        )
+        return (y_logico * self.alto_calle_vertical)
 
     def distancia_real(self, producto_a: Producto, interseccion: Coordenada) -> float:
 
@@ -177,13 +144,8 @@ class Ubicaciones(Grafo):
         # Deben estar en la misma fila
         if origen.y != destino.y:
             return False
-
-        separacion = self.estanterias_por_calle + 1
-
-        bloque_origen = origen.x // separacion
-        bloque_destino = destino.x // separacion
-
-        return bloque_origen == bloque_destino
+        else:
+            return True
 
     def _intersecciones_vecinas(
             self,
@@ -212,20 +174,20 @@ class Ubicaciones(Grafo):
 
     def _mejor_interseccion(
             self,
-            producto: Producto,
-            objetivo: Producto,
+            origen: Producto,
+            destino: Producto,
             intersec: list[Coordenada]
     ) -> Coordenada:
 
         vecinas = self._intersecciones_vecinas(
-            producto,
+            origen,
             intersec
         )
 
         return min(
             vecinas,
             key=lambda inter: self._manhattan_Prod_Coord(
-                objetivo,
+                destino,
                 inter
             )
         )
