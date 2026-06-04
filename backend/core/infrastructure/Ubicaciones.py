@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, model_validator, PrivateAttr
+from pydantic import BaseModel, Field, computed_field, model_validator, PrivateAttr
 from typing import Self
 from .Producto import Producto
 from ..interfaces.Grafo import Grafo
@@ -70,7 +70,7 @@ class Ubicaciones(Grafo):
 
                     #Si estan en el mismo pasillo
                     if self.mismo_pasillo(origen, destino):
-                        metros = self._manhattan(origen, destino)
+                        metros = self.distancia_real_productos(origen, destino)
                     else:
                         #Buscar interseccion mas conveniente
 
@@ -126,13 +126,16 @@ class Ubicaciones(Grafo):
 
         return abs(ax - bx) + abs(ay - by)
 
-    def _manhattan(self, origen: Producto, destino: Producto) -> float:
-        return abs(origen.x - destino.x) + abs(origen.y - destino.y)
+    def distancia_real_productos(self, origen: Producto, destino: Producto) -> float:
+        origen_x_real = self.posicion_real_x(origen.x)
+        origen_y_real = self.posicion_real_y(origen.y)
+
+        destino_x_real = self.posicion_real_x(destino.x)
+        destino_y_real = self.posicion_real_y(destino.y)
+
+        return abs(origen_x_real - destino_x_real) + abs(origen_y_real - destino_y_real)
 
     def _manhattan_Prod_Coord(self, origen: Producto, destino: Coordenada) -> float:
-        return abs(origen.x - destino.x) + abs(origen.y - destino.y)
-
-    def _manhattan_Coord_Coord(self, origen: Coordenada, destino: Coordenada) -> float:
         return abs(origen.x - destino.x) + abs(origen.y - destino.y)
 
     def mismo_pasillo(
@@ -240,3 +243,8 @@ class Ubicaciones(Grafo):
             f"  nodos={nodos},\n"
             f"  total_aristas={sum(len(v) for v in self._distancias.values())}\n)"
         )
+
+    @computed_field
+    @property
+    def distancias(self) -> dict[str, dict[str, UnidadDistancia]]:
+        return self._distancias

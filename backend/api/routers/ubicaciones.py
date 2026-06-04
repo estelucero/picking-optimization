@@ -27,12 +27,12 @@ def _to_object_id(ubicacion_id: str) -> ObjectId:
         raise HTTPException(status_code=400, detail="Invalid ubicacion id") from exc
 
 
-def _validar_con_core(ubicacion) -> None:
+def crear_grafo(ubicacion) -> CoreUbicaciones:
     productos = [Producto(**producto.model_dump()) for producto in ubicacion.productos]
 
     doc = ubicacion.model_dump()
 
-    CoreUbicaciones(productos=productos,
+    return CoreUbicaciones(productos=productos,
                     calles_verticales=doc["calles_verticales"],
                     calles_horizontales=doc["calles_horizontales"],
                     estanterias_por_calle=doc["estanterias_por_calle"])
@@ -40,10 +40,11 @@ def _validar_con_core(ubicacion) -> None:
 
 @router.post("/")
 def create_ubicacion(ubicacion: UbicacionCreate):
-    _validar_con_core(ubicacion)
+    grafo = crear_grafo(ubicacion)
 
     now = datetime.now(timezone.utc)
     document = ubicacion.model_dump()
+    document["distancias"] = grafo.model_dump()["distancias"]
     document["created_at"] = now
     document["updated_at"] = now
 
@@ -82,7 +83,9 @@ def update_ubicacion(ubicacion_id: str, payload: UbicacionUpdate):
     _validar_con_core(payload.productos)
 
     now = datetime.now(timezone.utc)
+    grafo = crear_grafo(payload)
     update_document = payload.model_dump()
+    update_document["distancias"] = grafo.model_dump()["distancias"]
     update_document["updated_at"] = now
     update_document["created_at"] = existing.get("created_at", now)
 
