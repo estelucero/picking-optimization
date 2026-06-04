@@ -40,6 +40,10 @@ class UbicacionBase(BaseModel):
     name: str = Field(..., min_length=1)
     productos: list[UbicacionProductoIn] = Field(..., min_length=1)
     deposito: str = "DEPOSITO"
+    calles_verticales: int = Field(..., gt=0)
+    calles_horizontales: int = Field(..., gt=0)
+    estanterias_por_calle: int = Field(..., gt=0)
+
 
     @field_validator("name", "deposito", mode="before")
     @classmethod

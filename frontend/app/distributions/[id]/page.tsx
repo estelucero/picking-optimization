@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, CalendarDays, Check, MapPin, Package, Pencil, Plus, Save, X } from "lucide-react";
 
-import { CoordinateMap } from "@/components/coordinate-map";
+import { WarehouseCanvas, type WarehouseConfig, type WarehouseProduct } from "@/components/warehouse-canvas";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,20 @@ import {
   fromBackendDocumentWithDeposit,
   toBackendPayloadFromMapping,
 } from "@/lib/ubicaciones";
+
+const DEFAULT_WAREHOUSE_CONFIG: WarehouseConfig = {
+  warehouseWidth: 1200,
+  warehouseHeight: 600,
+  numAisles: 4,
+  numRows: 4,
+  shelvesBetweenStreets: 4,
+  verticalStreetWidth: 1.5,
+  verticalStreetHeight: 18,
+  horizontalStreetWidth: 36,
+  horizontalStreetHeight: 0.9,
+  shelfWidth: 1,
+  shelfPlacementMode: "both",
+};
 
 function formatDate(value?: string): string {
   if (!value) return "Sin fecha";
@@ -95,6 +109,26 @@ export default function DistributionDetailPage() {
   const draftProducts = draftCoordinates.filter((coord) => !coord.isDeposit);
   const nextProductId =
     (draftProducts.length > 0 ? Math.max(...draftProducts.map((product) => product.id)) : 0) + 1;
+  const warehouseConfig = useMemo<WarehouseConfig>(() => ({
+    ...DEFAULT_WAREHOUSE_CONFIG,
+    numAisles: distribution?.callesVerticales ?? DEFAULT_WAREHOUSE_CONFIG.numAisles,
+    numRows: distribution?.callesHorizontales ?? DEFAULT_WAREHOUSE_CONFIG.numRows,
+    shelvesBetweenStreets: distribution?.estanteriasPorCalle ?? DEFAULT_WAREHOUSE_CONFIG.shelvesBetweenStreets,
+  }), [distribution]);
+  const warehouseProducts = useMemo<WarehouseProduct[]>(() => activeCoordinates
+    .filter((coordinate) => !coordinate.isDeposit)
+    .map((coordinate) => ({
+      id: coordinate.id,
+      x: coordinate.x,
+      y: coordinate.y,
+      name: coordinate.name,
+      weight: coordinate.weight,
+      aisle: coordinate.aisle ?? Math.round(coordinate.x),
+      row: coordinate.row ?? Math.round(coordinate.y),
+      shelfIndex: coordinate.shelfIndex ?? 0,
+      slotSide: coordinate.slotSide ?? "top",
+      slotIndex: coordinate.slotIndex ?? 0,
+    })), [activeCoordinates]);
 
   const updateDistributionName = (name: string) => {
     setDraftDistribution((current) => (current ? { ...current, name } : current));
@@ -379,7 +413,13 @@ export default function DistributionDetailPage() {
             </div>
 
             <div className="rounded-2xl border border-blue-100 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950/60">
-              <CoordinateMap coordinates={coordinates} onAddCoordinate={() => {}} onRemoveCoordinate={() => {}} readOnly />
+              <WarehouseCanvas
+                config={warehouseConfig}
+                products={warehouseProducts}
+                onAddProduct={() => {}}
+                onRemoveProduct={() => {}}
+                readOnly
+              />
             </div>
           </CardContent>
         </Card>

@@ -273,6 +273,10 @@ export default function RunDetailPage() {
         throw new Error("No se pudieron cargar las distribuciones");
       }
 
+      if (!experiment) {
+        throw new Error("No se encontro el experimento");
+      }
+
       const documents = (await response.json()) as BackendUbicacionDocument[];
       const layoutValue = normalizeText(experiment.layout);
       const matchedDistribution = documents.find(
@@ -562,13 +566,12 @@ export default function RunDetailPage() {
       </div>
 
       <Dialog open={isRouteDialogOpen} onOpenChange={setIsRouteDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="!w-[94vw] !max-w-[1320px] h-[88vh] overflow-hidden p-4">
           <DialogHeader>
             <DialogTitle>Ruta del operario</DialogTitle>
             <DialogDescription>
-              Visualizacion del recorrido en el grafico de distribucion con
-              trazado Manhattan (horizontal y luego vertical), incluyendo
-              salida y regreso al deposito.
+              Visualizacion del recorrido sobre el layout de distribucion,
+              usando los caminos calculados entre productos y deposito.
             </DialogDescription>
           </DialogHeader>
 
@@ -594,6 +597,12 @@ export default function RunDetailPage() {
                 <RoutePreviewMap
                   coordinates={distribution.coordinates}
                   route={selectedRouteJourney.ruta}
+                  caminos={distribution.caminos}
+                  layoutConfig={{
+                    numAisles: distribution.callesVerticales,
+                    numRows: distribution.callesHorizontales,
+                    shelvesBetweenStreets: distribution.estanteriasPorCalle,
+                  }}
                 />
               ) : null}
             </div>

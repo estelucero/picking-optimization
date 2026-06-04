@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CoordinateMap } from "@/components/coordinate-map";
+import { WarehouseCanvas, WarehouseProduct, WarehouseConfig } from "@/components/warehouse-canvas";
+import { WarehouseConfigPanel } from "@/components/warehouse-config";
 import { ProductRegistration } from "@/components/product-registration";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,22 +10,43 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Coordinate, toBackendPayload } from "@/lib/ubicaciones";
 
-export default function ProductMappingPage() {
-  const [coordinates, setCoordinates] = useState<Coordinate[]>([]);
-  const [nextId, setNextId] = useState(1);
-  const [hasSaved, setHasSaved] = useState(false);
-  const [mappingName, setMappingName] = useState("Nueva distribucion");
-  const [defaultWeight, setDefaultWeight] = useState("5.5");
+const DEFAULT_CONFIG: WarehouseConfig = {
+  warehouseWidth: 1200,
+  warehouseHeight: 600,
+  numAisles: 4,
+  numRows: 4,
+  shelvesBetweenStreets: 4,
+  verticalStreetWidth: 1.5,
+  verticalStreetHeight: 18,
+  horizontalStreetWidth: 36,
+  horizontalStreetHeight: 0.9,
+  shelfWidth: 1,
+  shelfPlacementMode: "both",
+};
 
-  // Cargar coordenadas guardadas del localStorage al montar
+function isVerticalStreetCoordinate(x: number, shelvesBetweenStreets: number): boolean {
+  return x >= 0 && x % (shelvesBetweenStreets + 1) === shelvesBetweenStreets;
+}
+
+function getMaxShelfX(config: WarehouseConfig): number {
+  return config.numAisles * (config.shelvesBetweenStreets + 1) + config.shelvesBetweenStreets - 1;
+}
+
+export default function ProductMappingPage() {
+  const [products, setProducts] = useState<WarehouseProduct[]>([]);
+  const [nextId, setNextId] = useState(1);
+  const [mappingName, setMappingName] = useState("Nueva distribucion");
+  const [defaultWeight] = useState("5.5");
+  const [config, setConfig] = useState<WarehouseConfig>(DEFAULT_CONFIG);
+
   useEffect(() => {
     const saved = localStorage.getItem("currentProductMapping");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setCoordinates(parsed);
+        setProducts(parsed);
         if (parsed.length > 0) {
-          const maxId = Math.max(...parsed.map((c: Coordinate) => c.id));
+          const maxId = Math.max(...parsed.map((c: WarehouseProduct) => c.id));
           setNextId(maxId + 1);
         }
       } catch (e) {
@@ -33,69 +55,77 @@ export default function ProductMappingPage() {
     }
   }, []);
 
-  // Guardar coordenadas en localStorage cuando cambien
   useEffect(() => {
-    localStorage.setItem("currentProductMapping", JSON.stringify(coordinates));
-  }, [coordinates]);
+    localStorage.setItem("currentProductMapping", JSON.stringify(products));
+  }, [products]);
 
-  const handleAddCoordinate = (
-    name: string,
-    x: number,
-    y: number,
-    weight: number,
-  ) => {
-    const newCoordinate: Coordinate = {
+  const handleAddProduct = (x: number, y: number, aisle: number, row: number, shelfIndex: number, slotSide: "top" | "bottom", slotIndex: number) => {
+    const newProduct: WarehouseProduct = {
       id: nextId,
       x,
       y,
-      name,
-      weight,
+      name: `Producto ${nextId}`,
+      weight: parseFloat(defaultWeight) || 0,
+      aisle,
+      row,
+      shelfIndex,
+      slotSide,
+      slotIndex,
     };
-    setCoordinates((prev) => [...prev, newCoordinate]);
+    setProducts((prev) => [...prev, newProduct]);
     setNextId((prev) => prev + 1);
   };
 
-  const handleRemoveCoordinate = (id: number) => {
-    setCoordinates((prev) => prev.filter((c) => c.id !== id));
+  const handleRemoveProduct = (id: number) => {
+    setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleUpdateCoordinate = (
+  const handleUpdateProduct = (
     id: number,
-    updates: Partial<Pick<Coordinate, "name" | "weight">>,
+    updates: Partial<Pick<WarehouseProduct, "name" | "weight">>,
   ) => {
-    setCoordinates((prev) =>
-      prev.map((coordinate) =>
-        coordinate.id === id ? { ...coordinate, ...updates } : coordinate,
+    setProducts((prev) =>
+      prev.map((product) =>
+        product.id === id ? { ...product, ...updates } : product,
       ),
     );
   };
 
   const handleApplyWeightToAll = (weight: number) => {
-    setCoordinates((prev) =>
-      prev.map((coordinate) => ({ ...coordinate, weight })),
+    setProducts((prev) =>
+      prev.map((product) => ({ ...product, weight })),
     );
   };
 
   const handleSaveMapping = async () => {
-    if (coordinates.length === 0) {
+    if (products.length === 0) {
       alert("Please add at least one product before saving");
       return;
     }
 
     try {
+      const coordinates: Coordinate[] = products.map(p => ({
+        id: p.id,
+        x: p.x,
+        y: p.y,
+        name: p.name,
+        weight: p.weight,
+        aisle: p.aisle,
+        row: p.row,
+        shelfIndex: p.shelfIndex,
+        slotSide: p.slotSide,
+        slotIndex: p.slotIndex,
+      }));
+
       const payload = toBackendPayload(
         mappingName.trim() || "Nueva distribucion",
         coordinates,
+        {
+          callesVerticales: config.numAisles,
+          callesHorizontales: config.numRows,
+          estanteriasPorCalle: config.shelvesBetweenStreets,
+        },
       );
-
-      //! DEUDA TECNICA BORRAR PARA PASAR A MODELO
-      payload.productos.unshift({
-        codigo: "DEPOSITO",
-        nombre: "DEPOSITO",
-        peso: 0.1,
-        x: 0,
-        y: 0,
-      });
 
       const response = await fetch("/api/ubicaciones", {
         method: "POST",
@@ -109,15 +139,14 @@ export default function ProductMappingPage() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData?.detail ||
-            errorData?.error ||
-            "No se pudo guardar la distribucion",
+          errorData?.error ||
+          "No se pudo guardar la distribucion",
         );
       }
 
       localStorage.removeItem("currentProductMapping");
-      setHasSaved(true);
       alert("Distribucion cargada!");
-      setCoordinates([]);
+      setProducts([]);
       setNextId(1);
     } catch (error) {
       console.error("Error saving mapping:", error);
@@ -125,9 +154,21 @@ export default function ProductMappingPage() {
     }
   };
 
+  const productsWithCoords: Coordinate[] = products.map(p => ({
+    id: p.id,
+    x: p.x,
+    y: p.y,
+    name: p.name,
+    weight: p.weight,
+    aisle: p.aisle,
+    row: p.row,
+    shelfIndex: p.shelfIndex,
+    slotSide: p.slotSide,
+    slotIndex: p.slotIndex,
+  }));
+
   return (
     <div className="p-8 space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-3">
           <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
@@ -149,7 +190,7 @@ export default function ProductMappingPage() {
           </div>
         </div>
         <div className="space-y-3 lg:w-64">
-          {coordinates.length > 0 && (
+          {products.length > 0 && (
             <Button
               onClick={handleSaveMapping}
               className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold gap-2"
@@ -160,43 +201,74 @@ export default function ProductMappingPage() {
         </div>
       </div>
 
-      {/* Main Layout: Map (2/3) + Panel (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Mapa Interactivo - 2 columnas */}
         <div className="lg:col-span-2">
           <div className="bg-white dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-2xl p-6 shadow-lg">
-            <CoordinateMap
-              coordinates={coordinates}
-              onAddCoordinate={(x, y) => {
-                const productName = `Producto ${nextId}`;
-                handleAddCoordinate(
-                  productName,
-                  x,
-                  y,
-                  parseFloat(defaultWeight) || 0,
-                );
-              }}
-              onRemoveCoordinate={handleRemoveCoordinate}
+            <WarehouseCanvas
+              config={config}
+              products={products}
+              onAddProduct={handleAddProduct}
+              onRemoveProduct={handleRemoveProduct}
+              readOnly={false}
             />
           </div>
         </div>
 
-        {/* Panel Derecho - 1 columna */}
-        <div>
+        <div className="space-y-6">
+          <WarehouseConfigPanel
+            config={config}
+            onConfigChange={setConfig}
+            onReset={() => setConfig(DEFAULT_CONFIG)}
+          />
+
           <ProductRegistration
-            coordinates={coordinates}
-            onAddProduct={handleAddCoordinate}
-            onDeleteProduct={handleRemoveCoordinate}
-            onUpdateProduct={handleUpdateCoordinate}
+            coordinates={productsWithCoords}
+            onAddProduct={(name, x, y, weight) => {
+              const aisle = Math.min(Math.max(0, Math.round(x)), getMaxShelfX(config));
+              const row = Math.min(Math.max(0, Math.round(y)), Math.max(0, config.numRows - 2));
+              if (aisle === 0 && row === 0) {
+                alert("La ubicacion 0,0 esta reservada para el deposito");
+                return;
+              }
+
+              if (isVerticalStreetCoordinate(aisle, config.shelvesBetweenStreets)) {
+                alert("Esa coordenada X corresponde a una calle vertical");
+                return;
+              }
+
+              if (products.some((product) => Math.round(product.x) === aisle && Math.round(product.y) === row)) {
+                alert("Esa estanteria ya tiene un producto asignado");
+                return;
+              }
+
+              const shelfIndex = 0;
+              const slotSide: "top" | "bottom" = "top";
+              const slotIndex = 0;
+              const product: WarehouseProduct = {
+                id: nextId,
+                x: aisle,
+                y: row,
+                name: name.trim() || `Producto ${nextId}`,
+                weight,
+                aisle,
+                row,
+                shelfIndex,
+                slotSide,
+                slotIndex,
+              };
+              setProducts((prev) => [...prev, product]);
+              setNextId((prev) => prev + 1);
+            }}
+            onDeleteProduct={handleRemoveProduct}
+            onUpdateProduct={handleUpdateProduct}
             onApplyWeightToAll={handleApplyWeightToAll}
             defaultWeight={parseFloat(defaultWeight) || 0}
           />
 
-          {/* Link a Experimentation */}
           <Link href="/experimentation">
             <Button
               variant="outline"
-              className="w-full mt-6 gap-2 border-blue-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700"
+              className="w-full gap-2 border-blue-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700"
             >
               Experimentos <ArrowRight className="w-4 h-4" />
             </Button>
@@ -205,7 +277,7 @@ export default function ProductMappingPage() {
           <Link href="/distributions">
             <Button
               variant="outline"
-              className="w-full mt-3 gap-2 border-blue-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700"
+              className="w-full gap-2 border-blue-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700"
             >
               Ver distribuciones <ArrowRight className="w-4 h-4" />
             </Button>
