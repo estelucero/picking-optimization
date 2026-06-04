@@ -54,15 +54,6 @@ interface ShelfRect {
   h: number;
 }
 
-interface HalfRect {
-  shelf: ShelfRect;
-  side: "top" | "bottom";
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
 const CANVAS_WIDTH = 920;
 const CANVAS_HEIGHT = 580;
 const PADDING = 28;
@@ -139,22 +130,6 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     return shelves;
   }, [getLayout]);
 
-  const getHalves = useCallback((shelves: ShelfRect[]): HalfRect[] => {
-    const halves: HalfRect[] = [];
-    for (const shelf of shelves) {
-      if (config.shelfPlacementMode === "both") {
-        const half = shelf.h / 2;
-        halves.push({ shelf, side: "top", x: shelf.x, y: shelf.y, w: shelf.w, h: half });
-        halves.push({ shelf, side: "bottom", x: shelf.x, y: shelf.y + half, w: shelf.w, h: half });
-      } else if (config.shelfPlacementMode === "top") {
-        halves.push({ shelf, side: "top", x: shelf.x, y: shelf.y, w: shelf.w, h: shelf.h });
-      } else {
-        halves.push({ shelf, side: "bottom", x: shelf.x, y: shelf.y, w: shelf.w, h: shelf.h });
-      }
-    }
-    return halves;
-  }, [config.shelfPlacementMode]);
-
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -163,7 +138,6 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
 
     const l = getLayout();
     const shelves = getShelves();
-    const halves = getHalves(shelves);
 
     const bg = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     bg.addColorStop(0, "#f8fafc");
@@ -192,30 +166,32 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     for (const shelf of shelves) {
       ctx.fillStyle = "#475569";
       ctx.fillRect(shelf.x, shelf.y, shelf.w, shelf.h);
-      if (config.shelfPlacementMode === "both") {
-        ctx.strokeStyle = "rgba(241,245,249,0.9)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(shelf.x, shelf.y + shelf.h / 2);
-        ctx.lineTo(shelf.x + shelf.w, shelf.y + shelf.h / 2);
-        ctx.stroke();
-      }
+
+      ctx.strokeStyle = "rgba(241,245,249,1)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(shelf.x, shelf.y);
+      ctx.lineTo(shelf.x, shelf.y + shelf.h);
+      ctx.moveTo(shelf.x + shelf.w, shelf.y);
+      ctx.lineTo(shelf.x + shelf.w, shelf.y + shelf.h);
+      ctx.moveTo(shelf.x, shelf.y + shelf.h);
+      ctx.lineTo(shelf.x + shelf.w, shelf.y + shelf.h);
+      ctx.stroke();
     }
 
-    // Products (max 1 top + 1 bottom per shelf by lookup logic)
-    for (const half of halves) {
+    // Products: one product per shelf, centered in the shelf body.
+    for (const shelf of shelves) {
       const product = products.find(
         (p) =>
           !(p.x === 0 && p.y === 0) &&
-          Math.round(p.x) === half.shelf.col &&
-          Math.round(p.y) === half.shelf.row &&
-          (p.slotSide ?? "top") === half.side,
+          Math.round(p.x) === shelf.col &&
+          Math.round(p.y) === shelf.row,
       );
       if (!product) continue;
 
-      const cx = half.x + half.w / 2;
-      const cy = half.y + half.h / 2;
-      const r = Math.max(6, Math.min(10, Math.min(half.w, half.h) * 0.24));
+      const cx = shelf.x + shelf.w / 2;
+      const cy = shelf.y + shelf.h / 2;
+      const r = Math.max(6, Math.min(10, Math.min(shelf.w, shelf.h) * 0.24));
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.fillStyle = "#0891b2";
@@ -233,7 +209,7 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     ctx.strokeStyle = "#1e40af";
     ctx.lineWidth = 2;
     ctx.strokeRect(l.startX, l.startY, l.gridW, l.gridH);
-  }, [config.shelfPlacementMode, getHalves, getLayout, getShelves, products]);
+  }, [getLayout, getShelves, products]);
 
   useEffect(() => {
     draw();
@@ -251,17 +227,17 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     const mouse = getMouse(e);
     if (!mouse) return;
 
-    const halves = getHalves(getShelves());
-    const clicked = halves.find((h) => mouse.x >= h.x && mouse.x <= h.x + h.w && mouse.y >= h.y && mouse.y <= h.y + h.h);
+    const shelves = getShelves();
+    const clicked = shelves.find((shelf) => mouse.x >= shelf.x && mouse.x <= shelf.x + shelf.w && mouse.y >= shelf.y && mouse.y <= shelf.y + shelf.h);
     if (!clicked) return;
 
-    if (clicked.shelf.col === 0 && clicked.shelf.row === 0) {
+    if (clicked.col === 0 && clicked.row === 0) {
       setMessage("Ubicacion reservada para el deposito");
       return;
     }
 
     const occupied = products.find(
-      (p) => Math.round(p.x) === clicked.shelf.col && Math.round(p.y) === clicked.shelf.row && (p.slotSide ?? "top") === clicked.side,
+      (p) => Math.round(p.x) === clicked.col && Math.round(p.y) === clicked.row,
     );
 
     if (occupied) {
@@ -270,9 +246,9 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
       return;
     }
 
-    onAddProduct(clicked.shelf.col, clicked.shelf.row, clicked.shelf.col, clicked.shelf.row, 0, clicked.side, 0);
+    onAddProduct(clicked.col, clicked.row, clicked.col, clicked.row, 0, "top", 0);
     setMessage("Producto agregado");
-  }, [getHalves, getShelves, onAddProduct, onRemoveProduct, products, readOnly]);
+  }, [getShelves, onAddProduct, onRemoveProduct, products, readOnly]);
 
   return (
     <div className="space-y-3">
@@ -285,7 +261,7 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
         <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} onClick={handleClick} />
       </div>
 
-      <p className="text-xs text-slate-500 dark:text-slate-400">Cada estanteria acepta 1 producto arriba y 1 abajo.</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">Cada estanteria acepta 1 producto.</p>
       {message ? <p className="text-xs text-blue-700 dark:text-blue-300">{message}</p> : null}
     </div>
   );

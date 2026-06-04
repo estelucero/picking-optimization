@@ -236,8 +236,13 @@ export default function ProductMappingPage() {
                 return;
               }
 
+              if (products.some((product) => Math.round(product.x) === aisle && Math.round(product.y) === row)) {
+                alert("Esa estanteria ya tiene un producto asignado");
+                return;
+              }
+
               const shelfIndex = 0;
-              const slotSide: "top" | "bottom" = config.shelfPlacementMode === "bottom" ? "bottom" : "top";
+              const slotSide: "top" | "bottom" = "top";
               const slotIndex = 0;
               const product: WarehouseProduct = {
                 id: nextId,

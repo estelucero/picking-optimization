@@ -1,5 +1,6 @@
 export interface Coordinate {
 id: number
+codigo?: string
 x: number
 y: number
 name: string
@@ -11,6 +12,14 @@ shelfIndex?: number
 slotSide?: "top" | "bottom"
 slotIndex?: number
 }
+
+export interface CaminoCoordinate {
+x: number
+y: number
+}
+
+export type DistributionPaths = Record<string, Record<string, CaminoCoordinate[]>>
+export type DistributionDistances = Record<string, Record<string, { metros: number }>>
 
 export interface WarehouseConfig {
 warehouseWidth: number
@@ -33,6 +42,8 @@ export interface ProductMapping {
   callesVerticales?: number
   callesHorizontales?: number
   estanteriasPorCalle?: number
+  caminos?: DistributionPaths
+  distancias?: DistributionDistances
   createdAt?: string
 }
 
@@ -55,8 +66,8 @@ export interface BackendUbicacionPayload {
 
 export interface BackendUbicacionDocument extends BackendUbicacionPayload {
   id: string
-  distancias?: Record<string, Record<string, { metros: number }>>
-  caminos?: Record<string, Record<string, { x: number; y: number }[]>>
+  distancias?: DistributionDistances
+  caminos?: DistributionPaths
   created_at?: string
   updated_at?: string
 }
@@ -74,6 +85,8 @@ interface BackendLayoutConfig {
 
 function getCodigoProducto(coordinate: Coordinate): string {
   if (coordinate.isDeposit) return DEPOSITO_CODIGO
+
+  if (coordinate.codigo) return coordinate.codigo
 
   return `codigo${coordinate.id}`
 }
@@ -139,6 +152,7 @@ export function fromBackendDocument(document: BackendUbicacionDocument): Product
     .map((producto, index) => {
       return {
         id: getCoordinateId(producto.codigo, index + 1),
+        codigo: producto.codigo,
         x: producto.x,
         y: producto.y,
         name: producto.nombre,
@@ -153,6 +167,8 @@ export function fromBackendDocument(document: BackendUbicacionDocument): Product
     callesVerticales: document.calles_verticales,
     callesHorizontales: document.calles_horizontales,
     estanteriasPorCalle: document.estanterias_por_calle,
+    caminos: document.caminos,
+    distancias: document.distancias,
     createdAt: document.created_at,
   }
 }
@@ -164,6 +180,7 @@ export function fromBackendDocumentWithDeposit(document: BackendUbicacionDocumen
     .map((producto, index) => {
       return {
         id: getCoordinateId(producto.codigo, index + 1),
+        codigo: producto.codigo,
         x: producto.x,
         y: producto.y,
         name: producto.nombre,
@@ -175,6 +192,7 @@ export function fromBackendDocumentWithDeposit(document: BackendUbicacionDocumen
     ? [
         {
           id: 0,
+          codigo: deposit.codigo,
           x: deposit.x,
           y: deposit.y,
           name: deposit.nombre,
@@ -192,6 +210,8 @@ export function fromBackendDocumentWithDeposit(document: BackendUbicacionDocumen
     callesVerticales: document.calles_verticales,
     callesHorizontales: document.calles_horizontales,
     estanteriasPorCalle: document.estanterias_por_calle,
+    caminos: document.caminos,
+    distancias: document.distancias,
     createdAt: document.created_at,
   }
 }

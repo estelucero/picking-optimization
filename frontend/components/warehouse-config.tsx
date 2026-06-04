@@ -83,18 +83,6 @@ export function WarehouseConfigPanel({ config, onConfigChange, onReset }: Wareho
             <Label>Alto calle horizontal</Label>
             <Input type="number" step="0.1" min={0.2} value={config.horizontalStreetHeight} onChange={(e) => update({ horizontalStreetHeight: Math.max(0.2, Number(e.target.value) || 0.2) })} />
           </div>
-          <div className="col-span-2 space-y-2">
-            <Label>Ubicacion de estanterias respecto de calle horizontal</Label>
-            <select
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
-              value={config.shelfPlacementMode}
-              onChange={(e) => update({ shelfPlacementMode: e.target.value as "both" | "top" | "bottom" })}
-            >
-              <option value="both">Arriba y abajo</option>
-              <option value="top">Solo arriba</option>
-              <option value="bottom">Solo abajo</option>
-            </select>
-          </div>
         </div>
 
         {onReset ? (
