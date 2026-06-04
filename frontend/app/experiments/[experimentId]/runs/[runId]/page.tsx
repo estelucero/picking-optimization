@@ -273,6 +273,10 @@ export default function RunDetailPage() {
         throw new Error("No se pudieron cargar las distribuciones");
       }
 
+      if (!experiment) {
+        throw new Error("No se encontro el experimento");
+      }
+
       const documents = (await response.json()) as BackendUbicacionDocument[];
       const layoutValue = normalizeText(experiment.layout);
       const matchedDistribution = documents.find(

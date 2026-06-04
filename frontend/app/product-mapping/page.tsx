@@ -24,6 +24,14 @@ const DEFAULT_CONFIG: WarehouseConfig = {
   shelfPlacementMode: "both",
 };
 
+function isVerticalStreetCoordinate(x: number, shelvesBetweenStreets: number): boolean {
+  return x >= 0 && x % (shelvesBetweenStreets + 1) === shelvesBetweenStreets;
+}
+
+function getMaxShelfX(config: WarehouseConfig): number {
+  return config.numAisles * (config.shelvesBetweenStreets + 1) + config.shelvesBetweenStreets - 1;
+}
+
 export default function ProductMappingPage() {
   const [products, setProducts] = useState<WarehouseProduct[]>([]);
   const [nextId, setNextId] = useState(1);
@@ -112,15 +120,12 @@ export default function ProductMappingPage() {
       const payload = toBackendPayload(
         mappingName.trim() || "Nueva distribucion",
         coordinates,
+        {
+          callesVerticales: config.numAisles,
+          callesHorizontales: config.numRows,
+          estanteriasPorCalle: config.shelvesBetweenStreets,
+        },
       );
-
-      payload.productos.unshift({
-        codigo: "DEPOSITO",
-        nombre: "DEPOSITO",
-        peso: 0.1,
-        x: 0,
-        y: 0,
-      });
 
       const response = await fetch("/api/ubicaciones", {
         method: "POST",
@@ -219,8 +224,18 @@ export default function ProductMappingPage() {
           <ProductRegistration
             coordinates={productsWithCoords}
             onAddProduct={(name, x, y, weight) => {
-              const aisle = Math.min(Math.max(0, Math.round(x)), config.numAisles);
-              const row = Math.min(Math.max(0, Math.round(y)), config.numRows - 1);
+              const aisle = Math.min(Math.max(0, Math.round(x)), getMaxShelfX(config));
+              const row = Math.min(Math.max(0, Math.round(y)), Math.max(0, config.numRows - 2));
+              if (aisle === 0 && row === 0) {
+                alert("La ubicacion 0,0 esta reservada para el deposito");
+                return;
+              }
+
+              if (isVerticalStreetCoordinate(aisle, config.shelvesBetweenStreets)) {
+                alert("Esa coordenada X corresponde a una calle vertical");
+                return;
+              }
+
               const shelfIndex = 0;
               const slotSide: "top" | "bottom" = config.shelfPlacementMode === "bottom" ? "bottom" : "top";
               const slotIndex = 0;

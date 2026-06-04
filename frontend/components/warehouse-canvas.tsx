@@ -119,7 +119,7 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
       let xCursor = l.startX;
       for (let block = 0; block < l.verticalStreets + 1; block++) {
         for (let s = 0; s < l.shelvesBetweenVertical; s++) {
-          const col = block * l.shelvesBetweenVertical + s;
+          const col = block * (l.shelvesBetweenVertical + 1) + s;
           shelves.push({
             col,
             row,
@@ -205,7 +205,11 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     // Products (max 1 top + 1 bottom per shelf by lookup logic)
     for (const half of halves) {
       const product = products.find(
-        (p) => (p.aisle ?? 0) === half.shelf.col && (p.row ?? 0) === half.shelf.row && (p.slotSide ?? "top") === half.side,
+        (p) =>
+          !(p.x === 0 && p.y === 0) &&
+          Math.round(p.x) === half.shelf.col &&
+          Math.round(p.y) === half.shelf.row &&
+          (p.slotSide ?? "top") === half.side,
       );
       if (!product) continue;
 
@@ -251,8 +255,13 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     const clicked = halves.find((h) => mouse.x >= h.x && mouse.x <= h.x + h.w && mouse.y >= h.y && mouse.y <= h.y + h.h);
     if (!clicked) return;
 
+    if (clicked.shelf.col === 0 && clicked.shelf.row === 0) {
+      setMessage("Ubicacion reservada para el deposito");
+      return;
+    }
+
     const occupied = products.find(
-      (p) => (p.aisle ?? 0) === clicked.shelf.col && (p.row ?? 0) === clicked.shelf.row && (p.slotSide ?? "top") === clicked.side,
+      (p) => Math.round(p.x) === clicked.shelf.col && Math.round(p.y) === clicked.shelf.row && (p.slotSide ?? "top") === clicked.side,
     );
 
     if (occupied) {
