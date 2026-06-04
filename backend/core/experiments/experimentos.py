@@ -29,6 +29,9 @@ class ConfiguracionExperimento(BaseModel):
     capacidad_carro: float = Field(default=30.0, gt=0)
     seed: int | None = None
     layout_name: str = Field(default="Layout default", min_length=1)
+    calles_verticales: int = Field(..., gt=0)
+    calles_horizontales: int = Field(..., gt=0)
+    estanterias_por_calle: int = Field(..., gt=0)
 
 
 class ResultadoOperario(BaseModel):
@@ -67,7 +70,12 @@ class Experimentos:
     def ejecutar(self) -> dict:
         rng = np.random.default_rng(self._configuracion.seed)
 
-        ubicaciones = Ubicaciones(productos=self._productos)
+        ubicaciones = Ubicaciones(
+            productos=self._productos,
+            calles_verticales=self._configuracion.calles_verticales,
+            calles_horizontales=self._configuracion.calles_horizontales,
+            estanterias_por_calle=self._configuracion.estanterias_por_calle,
+        )
         tsp = TSP(grafo=ubicaciones, deposito=self._configuracion.deposito)
         modelo = Modelo(tsp=tsp)
 

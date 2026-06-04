@@ -28,7 +28,10 @@ class ExperimentoService:
             beta_picking=payload.beta_picking,
             deposito=ubicacion_document.get("deposito", "DEPOSITO"),
             seed=payload.seed,
-            layout_name=ubicacion_document.get("name")
+            layout_name=ubicacion_document.get("name"),
+            calles_verticales=ubicacion_document["calles_verticales"],
+            calles_horizontales=ubicacion_document["calles_horizontales"],
+            estanterias_por_calle=ubicacion_document["estanterias_por_calle"],
         )
 
         resultado = Experimentos(productos=productos, configuracion=configuracion).ejecutar()
