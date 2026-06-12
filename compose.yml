@@ -24,7 +24,7 @@ services:
       - "5678:5678"
     command: python -m debugpy --listen 0.0.0.0:5678 -m uvicorn mainApi:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ./backend:/app
+      - ./backend:/app:Z
     environment:
       - MONGO_URI=mongodb://mongodb:27017
 
@@ -36,4 +36,4 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - ./mongo/data:/data/db
+      - ./mongo/data:/data/db:Z
