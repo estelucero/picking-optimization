@@ -30,6 +30,26 @@ type RouteNode = LogicalPoint & {
   codeCandidates: string[];
 };
 
+type CanvasPoint = {
+  x: number;
+  y: number;
+};
+
+type DrawableSegment = {
+  from: CanvasPoint;
+  to: CanvasPoint;
+  orientation: "horizontal" | "vertical";
+  rangeStart: number;
+  rangeEnd: number;
+  lane: number;
+  laneCount: number;
+};
+
+type OffsetDrawableSegment = DrawableSegment & {
+  offsetFrom: CanvasPoint;
+  offsetTo: CanvasPoint;
+};
+
 type Layout = ReturnType<typeof getLayout>;
 
 const MAP_WIDTH = 1200;
@@ -263,6 +283,132 @@ function drawDirectionArrow(
   ctx.fill();
 }
 
+function offsetDrawableSegment(segment: DrawableSegment): { from: CanvasPoint; to: CanvasPoint } {
+  const offset = segment.laneCount > 1 ? (segment.lane - (segment.laneCount - 1) / 2) * 14 : 0;
+
+  if (segment.orientation === "horizontal") {
+    return {
+      from: { x: segment.from.x, y: segment.from.y + offset },
+      to: { x: segment.to.x, y: segment.to.y + offset },
+    };
+  }
+
+  return {
+    from: { x: segment.from.x + offset, y: segment.from.y },
+    to: { x: segment.to.x + offset, y: segment.to.y },
+  };
+}
+
+function isSamePoint(a: CanvasPoint, b: CanvasPoint): boolean {
+  return Math.abs(a.x - b.x) < 0.001 && Math.abs(a.y - b.y) < 0.001;
+}
+
+function appendPoint(points: CanvasPoint[], point: CanvasPoint) {
+  const lastPoint = points[points.length - 1];
+  if (lastPoint && isSamePoint(lastPoint, point)) return;
+
+  points.push(point);
+}
+
+function appendManhattanConnection(
+  points: CanvasPoint[],
+  from: CanvasPoint,
+  to: CanvasPoint,
+  cornerMode: "horizontal-first" | "vertical-first",
+) {
+  if (isSamePoint(from, to)) return;
+
+  if (Math.abs(from.x - to.x) < 0.001 || Math.abs(from.y - to.y) < 0.001) {
+    appendPoint(points, to);
+    return;
+  }
+
+  const corner =
+    cornerMode === "horizontal-first"
+      ? { x: to.x, y: from.y }
+      : { x: from.x, y: to.y };
+
+  appendPoint(points, corner);
+  appendPoint(points, to);
+}
+
+function getConnectionCornerMode(
+  previous: OffsetDrawableSegment,
+  next: OffsetDrawableSegment,
+): "horizontal-first" | "vertical-first" {
+  if (previous.orientation === "horizontal" && next.orientation === "vertical") {
+    return "horizontal-first";
+  }
+
+  if (previous.orientation === "vertical" && next.orientation === "horizontal") {
+    return "vertical-first";
+  }
+
+  return previous.orientation === "horizontal" ? "vertical-first" : "horizontal-first";
+}
+
+function getIntersectionJoin(previous: OffsetDrawableSegment, next: OffsetDrawableSegment): CanvasPoint {
+  if (previous.orientation === "horizontal" && next.orientation === "vertical") {
+    return { x: next.offsetFrom.x, y: previous.offsetFrom.y };
+  }
+
+  return { x: previous.offsetFrom.x, y: next.offsetFrom.y };
+}
+
+function buildOffsetRoutePoints(segments: OffsetDrawableSegment[]): CanvasPoint[] {
+  const [firstSegment] = segments;
+  if (!firstSegment) return [];
+
+  const points: CanvasPoint[] = [firstSegment.offsetFrom];
+
+  segments.forEach((segment, index) => {
+    const nextSegment = segments[index + 1];
+    if (!nextSegment) {
+      appendPoint(points, segment.offsetTo);
+      return;
+    }
+
+    if (segment.orientation !== nextSegment.orientation) {
+      appendPoint(points, getIntersectionJoin(segment, nextSegment));
+      return;
+    }
+
+    appendPoint(points, segment.offsetTo);
+
+    appendManhattanConnection(
+      points,
+      segment.offsetTo,
+      nextSegment.offsetFrom,
+      getConnectionCornerMode(segment, nextSegment),
+    );
+  });
+
+  return points;
+}
+
+function drawRoutePath(
+  ctx: CanvasRenderingContext2D,
+  points: CanvasPoint[],
+  color: string,
+  lineWidth: number,
+) {
+  const [firstPoint] = points;
+  if (!firstPoint) return;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(firstPoint.x, firstPoint.y);
+
+  points.slice(1).forEach((point) => {
+    ctx.lineTo(point.x, point.y);
+  });
+
+  ctx.stroke();
+}
+
 function resolveProductLabel(
   item: BackendOperarioRutaItem,
   coordinates: Coordinate[],
@@ -470,6 +616,84 @@ function buildRouteMarkers(coordinates: Coordinate[], route: BackendOperarioRuta
   ];
 }
 
+function buildDrawableSegments(polyline: LogicalPoint[], layout: Layout): DrawableSegment[] {
+  const segments: DrawableSegment[] = [];
+  const groups = new Map<string, number[]>();
+
+  for (let index = 1; index < polyline.length; index += 1) {
+    const logicalFrom = polyline[index - 1];
+    const logicalTo = polyline[index];
+    const from = toCanvasPoint(logicalFrom, layout, "route");
+    const to = toCanvasPoint(logicalTo, layout, "route");
+    const sameX = Math.round(logicalFrom.x) === Math.round(logicalTo.x);
+    const sameY = Math.round(logicalFrom.y) === Math.round(logicalTo.y);
+
+    if (sameX && sameY) continue;
+
+    const orientation = sameY ? "horizontal" : "vertical";
+    const fixedAxis = orientation === "horizontal" ? Math.round(logicalFrom.y) : Math.round(logicalFrom.x);
+    const rangeStart = Math.min(
+      orientation === "horizontal" ? logicalFrom.x : logicalFrom.y,
+      orientation === "horizontal" ? logicalTo.x : logicalTo.y,
+    );
+    const rangeEnd = Math.max(
+      orientation === "horizontal" ? logicalFrom.x : logicalFrom.y,
+      orientation === "horizontal" ? logicalTo.x : logicalTo.y,
+    );
+    const groupKey = `${orientation}:${fixedAxis}`;
+
+    segments.push({
+      from,
+      to,
+      orientation,
+      rangeStart,
+      rangeEnd,
+      lane: 0,
+      laneCount: 1,
+    });
+
+    const segmentIndex = segments.length - 1;
+    const group = groups.get(groupKey) ?? [];
+    group.push(segmentIndex);
+    groups.set(groupKey, group);
+  }
+
+  groups.forEach((segmentIndexes) => {
+    const activeLaneEnds = new Map<number, number>();
+    let laneCount = 1;
+
+    const sortedIndexes = segmentIndexes.slice().sort((a, b) => {
+      const diff = segments[a].rangeStart - segments[b].rangeStart;
+      return diff !== 0 ? diff : segments[a].rangeEnd - segments[b].rangeEnd;
+    });
+
+    sortedIndexes.forEach((segmentIndex) => {
+      const segment = segments[segmentIndex];
+
+      activeLaneEnds.forEach((rangeEnd, lane) => {
+        if (rangeEnd <= segment.rangeStart) {
+          activeLaneEnds.delete(lane);
+        }
+      });
+
+      let lane = 0;
+      while (activeLaneEnds.has(lane)) {
+        lane += 1;
+      }
+
+      segment.lane = lane;
+      activeLaneEnds.set(lane, segment.rangeEnd);
+      laneCount = Math.max(laneCount, lane + 1);
+    });
+
+    segmentIndexes.forEach((segmentIndex) => {
+      segments[segmentIndex].laneCount = laneCount;
+    });
+  });
+
+  return segments;
+}
+
 function drawRoute(
   ctx: CanvasRenderingContext2D,
   polyline: LogicalPoint[],
@@ -477,20 +701,22 @@ function drawRoute(
   layout: Layout,
 ) {
   if (polyline.length >= 2) {
-    ctx.strokeStyle = "#dc2626";
-    ctx.lineWidth = 3;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
+    const segments = buildDrawableSegments(polyline, layout).map((segment): OffsetDrawableSegment => {
+      const { from, to } = offsetDrawableSegment(segment);
+      return {
+        ...segment,
+        offsetFrom: from,
+        offsetTo: to,
+      };
+    });
+    const routePoints = buildOffsetRoutePoints(segments);
 
-    for (let index = 1; index < polyline.length; index += 1) {
-      const from = toCanvasPoint(polyline[index - 1], layout, "route");
-      const to = toCanvasPoint(polyline[index], layout, "route");
-      ctx.beginPath();
-      ctx.moveTo(from.x, from.y);
-      ctx.lineTo(to.x, to.y);
-      ctx.stroke();
-      drawDirectionArrow(ctx, from.x, from.y, to.x, to.y);
-    }
+    drawRoutePath(ctx, routePoints, "rgba(255,255,255,0.85)", 6);
+    drawRoutePath(ctx, routePoints, "#dc2626", 3);
+
+    segments.forEach((segment) => {
+      drawDirectionArrow(ctx, segment.offsetFrom.x, segment.offsetFrom.y, segment.offsetTo.x, segment.offsetTo.y);
+    });
   }
 
   markers.forEach((marker) => {
