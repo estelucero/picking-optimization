@@ -146,7 +146,12 @@ class Ubicaciones(Grafo):
 
     def posicion_real_y(self, y_logico: float) -> float:
 
-        return (y_logico * self.alto_calle_vertical)
+        # Esto se debe a que la primera calle comparte con el 1
+        if(y_logico != 0):
+            y_logico = y_logico -1
+
+
+        return ((y_logico) * self.alto_calle_vertical)
 
     def distancia_real(self, producto_a: Producto, interseccion: Coordenada) -> float:
 
@@ -162,10 +167,20 @@ class Ubicaciones(Grafo):
         origen_x_real = self.posicion_real_x(origen.x)
         origen_y_real = self.posicion_real_y(origen.y)
 
+
         destino_x_real = self.posicion_real_x(destino.x)
         destino_y_real = self.posicion_real_y(destino.y)
+        
+        if self.comparten_calle_superior(origen, destino):
+            return abs(origen_x_real - destino_x_real)
 
         return abs(origen_x_real - destino_x_real) + abs(origen_y_real - destino_y_real)
+    
+    def comparten_calle_superior(self, origen, destino) -> bool:
+        return (
+            (origen.y == 0 and destino.y == 1)
+            or (origen.y == 1 and destino.y == 0)
+        )
 
     def _manhattan_Prod_Coord(self, origen: Producto, destino: Coordenada) -> float:
         return abs(origen.x - destino.x) + abs(origen.y - destino.y)
@@ -177,10 +192,13 @@ class Ubicaciones(Grafo):
     ) -> bool:
 
         # Deben estar en la misma fila
-        if origen.y != destino.y:
-            return False
-        else:
+        if origen.y == destino.y:
             return True
+
+        if {origen.y, destino.y} == {0, 1}:
+            return True
+
+        return False
 
     def _intersecciones_vecinas(
             self,
