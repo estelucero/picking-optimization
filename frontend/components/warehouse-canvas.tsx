@@ -8,6 +8,9 @@ export interface WarehouseProduct {
   y: number;
   name: string;
   weight?: number;
+  codigo?: string;
+  kind?: "product" | "deposit" | "bathroom";
+  isDeposit?: boolean;
   aisle?: number;
   row?: number;
   shelfIndex?: number;
@@ -29,9 +32,18 @@ export interface WarehouseConfig {
   shelfPlacementMode: "both" | "top" | "bottom";
 }
 
+type PlacementMode = "product" | "deposit" | "bathroom";
+
+function getProductKind(product: WarehouseProduct): PlacementMode {
+  if (product.kind === "deposit" || product.isDeposit || product.codigo === "DEPOSITO") return "deposit";
+  if (product.kind === "bathroom" || product.codigo === "BANO") return "bathroom";
+  return "product";
+}
+
 interface WarehouseCanvasProps {
   config: WarehouseConfig;
   products: WarehouseProduct[];
+  placementMode?: PlacementMode;
   onAddProduct: (
     x: number,
     y: number,
@@ -40,6 +52,7 @@ interface WarehouseCanvasProps {
     shelfIndex: number,
     slotSide: "top" | "bottom",
     slotIndex: number,
+    kind?: PlacementMode,
   ) => void;
   onRemoveProduct: (id: number) => void;
   readOnly?: boolean;
@@ -48,6 +61,7 @@ interface WarehouseCanvasProps {
 interface ShelfRect {
   col: number;
   row: number;
+  isTopRow?: boolean;
   x: number;
   y: number;
   w: number;
@@ -58,7 +72,14 @@ const CANVAS_WIDTH = 920;
 const CANVAS_HEIGHT = 580;
 const PADDING = 28;
 
-export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduct, readOnly = false }: WarehouseCanvasProps) {
+export function WarehouseCanvas({
+  config,
+  products,
+  placementMode = "product",
+  onAddProduct,
+  onRemoveProduct,
+  readOnly = false,
+}: WarehouseCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [message, setMessage] = useState("");
 
@@ -74,7 +95,7 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     const usableH = CANVAS_HEIGHT - PADDING * 2;
 
     const widthUnits = shelfCols * config.shelfWidth + verticalStreets * config.verticalStreetWidth;
-    const heightUnits = shelfRows * 1 + horizontalStreets * config.horizontalStreetHeight;
+    const heightUnits = (shelfRows + 1) * 1 + horizontalStreets * config.horizontalStreetHeight;
     const scale = Math.min(usableW / Math.max(widthUnits, 1), usableH / Math.max(heightUnits, 1));
 
     const shelfW = config.shelfWidth * scale;
@@ -83,7 +104,7 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     const hStreetH = config.horizontalStreetHeight * scale;
 
     const gridW = shelfCols * shelfW + verticalStreets * vStreetW;
-    const gridH = shelfRows * shelfH + horizontalStreets * hStreetH;
+    const gridH = (shelfRows + 1) * shelfH + horizontalStreets * hStreetH;
 
     return {
       verticalStreets,
@@ -106,6 +127,36 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     const l = getLayout();
     const shelves: ShelfRect[] = [];
 
+    let topXCursor = l.startX;
+    for (let block = 0; block < l.verticalStreets + 1; block++) {
+      for (let s = 0; s < l.shelvesBetweenVertical; s++) {
+        const col = block * (l.shelvesBetweenVertical + 1) + s;
+        shelves.push({
+          col,
+          row: 0,
+          isTopRow: true,
+          x: topXCursor,
+          y: l.startY,
+          w: l.shelfW,
+          h: l.shelfH,
+        });
+        topXCursor += l.shelfW;
+      }
+      if (block < l.verticalStreets) {
+        const col = block * (l.shelvesBetweenVertical + 1) + l.shelvesBetweenVertical;
+        shelves.push({
+          col,
+          row: 0,
+          isTopRow: true,
+          x: topXCursor,
+          y: l.startY,
+          w: l.vStreetW,
+          h: l.shelfH,
+        });
+        topXCursor += l.vStreetW;
+      }
+    }
+
     for (let row = 0; row < l.shelfRows; row++) {
       let xCursor = l.startX;
       for (let block = 0; block < l.verticalStreets + 1; block++) {
@@ -113,9 +164,9 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
           const col = block * (l.shelvesBetweenVertical + 1) + s;
           shelves.push({
             col,
-            row,
+            row: row + 1,
             x: xCursor,
-            y: l.startY + l.hStreetH + row * l.shelfH + row * l.hStreetH,
+            y: l.startY + l.shelfH + l.hStreetH + row * (l.shelfH + l.hStreetH),
             w: l.shelfW,
             h: l.shelfH,
           });
@@ -148,9 +199,9 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(l.startX - 8, l.startY - 8, l.gridW + 16, l.gridH + 16);
 
-    // Horizontal streets: exactly H, including top and bottom borders
+    // Horizontal streets: the first one separates the special top row from product shelves.
     for (let r = 0; r < l.horizontalStreets; r++) {
-      const y = l.startY + r * (l.shelfH + l.hStreetH);
+      const y = l.startY + l.shelfH + r * (l.shelfH + l.hStreetH);
       ctx.fillStyle = "#bbf7d0";
       ctx.fillRect(l.startX, y, l.gridW, l.hStreetH);
     }
@@ -164,10 +215,10 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
 
     // Shelves
     for (const shelf of shelves) {
-      ctx.fillStyle = "#475569";
+      ctx.fillStyle = shelf.isTopRow ? "#f8fafc" : "#475569";
       ctx.fillRect(shelf.x, shelf.y, shelf.w, shelf.h);
 
-      ctx.strokeStyle = "rgba(241,245,249,1)";
+      ctx.strokeStyle = shelf.isTopRow ? "#334155" : "rgba(241,245,249,1)";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(shelf.x, shelf.y);
@@ -179,31 +230,40 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
       ctx.stroke();
     }
 
-    // Products: one product per shelf, centered in the shelf body.
+    // Products and required special locations: one item per cell, centered.
     for (const shelf of shelves) {
       const product = products.find(
         (p) =>
-          !(p.x === 0 && p.y === 0) &&
           Math.round(p.x) === shelf.col &&
           Math.round(p.y) === shelf.row,
       );
       if (!product) continue;
 
+      const kind = getProductKind(product);
       const cx = shelf.x + shelf.w / 2;
       const cy = shelf.y + shelf.h / 2;
       const r = Math.max(6, Math.min(10, Math.min(shelf.w, shelf.h) * 0.24));
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fillStyle = "#0891b2";
-      ctx.fill();
-      ctx.strokeStyle = "#e0f2fe";
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      if (kind === "product") {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = "#0891b2";
+        ctx.fill();
+        ctx.strokeStyle = "#e0f2fe";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      } else {
+        const size = Math.max(18, Math.min(34, Math.min(shelf.w, shelf.h) * 0.68));
+        ctx.fillStyle = kind === "deposit" ? "#f97316" : "#8b5cf6";
+        ctx.strokeStyle = kind === "deposit" ? "#c2410c" : "#6d28d9";
+        ctx.lineWidth = 2;
+        ctx.fillRect(cx - size / 2, cy - size / 2, size, size);
+        ctx.strokeRect(cx - size / 2, cy - size / 2, size, size);
+      }
       ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 9px sans-serif";
+      ctx.font = kind === "product" ? "bold 9px sans-serif" : "bold 11px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(String(product.id), cx, cy);
+      ctx.fillText(kind === "deposit" ? "D" : kind === "bathroom" ? "B" : String(product.id), cx, cy);
     }
 
     ctx.strokeStyle = "#1e40af";
@@ -231,37 +291,47 @@ export function WarehouseCanvas({ config, products, onAddProduct, onRemoveProduc
     const clicked = shelves.find((shelf) => mouse.x >= shelf.x && mouse.x <= shelf.x + shelf.w && mouse.y >= shelf.y && mouse.y <= shelf.y + shelf.h);
     if (!clicked) return;
 
-    if (clicked.col === 0 && clicked.row === 0) {
-      setMessage("Ubicacion reservada para el deposito");
-      return;
-    }
-
     const occupied = products.find(
       (p) => Math.round(p.x) === clicked.col && Math.round(p.y) === clicked.row,
     );
 
     if (occupied) {
-      onRemoveProduct(occupied.id);
-      setMessage("Producto eliminado");
+      if (getProductKind(occupied) === "product") {
+        onRemoveProduct(occupied.id);
+        setMessage("Ubicacion liberada");
+        return;
+      }
+
+      setMessage("Deposito y baño se mueven seleccionando su modo y otra celda superior");
       return;
     }
 
-    onAddProduct(clicked.col, clicked.row, clicked.col, clicked.row, 0, "top", 0);
-    setMessage("Producto agregado");
-  }, [getShelves, onAddProduct, onRemoveProduct, products, readOnly]);
+    if (clicked.isTopRow && placementMode === "product") {
+      setMessage("La fila superior acepta solo deposito o baño");
+      return;
+    }
+
+    if (!clicked.isTopRow && placementMode !== "product") {
+      setMessage("Deposito y baño solo se ubican en la fila superior");
+      return;
+    }
+
+    onAddProduct(clicked.col, clicked.row, clicked.col, clicked.row, 0, "top", 0, placementMode);
+    setMessage(placementMode === "deposit" ? "Deposito ubicado" : placementMode === "bathroom" ? "Baño ubicado" : "Producto agregado");
+  }, [getShelves, onAddProduct, onRemoveProduct, placementMode, products, readOnly]);
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">Plano del deposito</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">V calles azules, H calles verdes, E estanterias entre calles</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">Fila superior: deposito/baño. Productos desde Y=1.</p>
       </div>
 
       <div className="rounded-xl border border-blue-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
         <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} onClick={handleClick} />
       </div>
 
-      <p className="text-xs text-slate-500 dark:text-slate-400">Cada estanteria acepta 1 producto.</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">Cada celda acepta 1 elemento. El payload usa DEPOSITO y BANO dentro de productos.</p>
       {message ? <p className="text-xs text-blue-700 dark:text-blue-300">{message}</p> : null}
     </div>
   );

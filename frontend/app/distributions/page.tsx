@@ -22,6 +22,10 @@ function formatDate(value?: string): string {
   }).format(new Date(value));
 }
 
+function isSpecialCoordinate(coordinate: ProductMapping["coordinates"][number]): boolean {
+  return Boolean(coordinate.isDeposit) || coordinate.kind === "deposit" || coordinate.kind === "bathroom" || coordinate.codigo === "DEPOSITO" || coordinate.codigo === "BANO";
+}
+
 export default function DistributionsPage() {
   const [mappings, setMappings] = useState<ProductMapping[]>([]);
   const [query, setQuery] = useState("");
@@ -130,7 +134,7 @@ export default function DistributionsPage() {
             )}
 
             {!isLoading && !error && filteredMappings.map((mapping) => {
-              const productsCount = mapping.coordinates.filter((coord) => !coord.isDeposit).length;
+              const productsCount = mapping.coordinates.filter((coord) => !isSpecialCoordinate(coord)).length;
               const deposit = mapping.coordinates.find((coord) => coord.isDeposit);
 
               return (

@@ -43,6 +43,18 @@ function formatDate(value?: string): string {
   }).format(new Date(value));
 }
 
+function isSpecialCoordinate(coordinate: ProductMapping["coordinates"][number]): boolean {
+  return Boolean(coordinate.isDeposit) || coordinate.kind === "deposit" || coordinate.kind === "bathroom" || coordinate.codigo === "DEPOSITO" || coordinate.codigo === "BANO";
+}
+
+type PlacementMode = "product" | "deposit" | "bathroom";
+
+function getCoordinateKind(coordinate: ProductMapping["coordinates"][number]): PlacementMode {
+  if (coordinate.kind === "deposit" || coordinate.isDeposit || coordinate.codigo === "DEPOSITO") return "deposit";
+  if (coordinate.kind === "bathroom" || coordinate.codigo === "BANO") return "bathroom";
+  return "product";
+}
+
 export default function DistributionDetailPage() {
   const params = useParams<{ id: string }>();
   const distributionId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
@@ -52,6 +64,7 @@ export default function DistributionDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [placementMode, setPlacementMode] = useState<PlacementMode>("product");
 
   useEffect(() => {
     let cancelled = false;
@@ -103,10 +116,12 @@ export default function DistributionDetailPage() {
   const coordinates = useMemo(() => distribution?.coordinates ?? [], [distribution]);
   const draftCoordinates = draftDistribution?.coordinates ?? [];
   const activeCoordinates = isEditing ? draftCoordinates : coordinates;
-  const deposit = activeCoordinates.find((coord) => coord.isDeposit);
-  const products = activeCoordinates.filter((coord) => !coord.isDeposit);
-  const draftDeposit = draftCoordinates.find((coord) => coord.isDeposit);
-  const draftProducts = draftCoordinates.filter((coord) => !coord.isDeposit);
+  const deposit = activeCoordinates.find((coord) => getCoordinateKind(coord) === "deposit");
+  const bathroom = activeCoordinates.find((coord) => coord.kind === "bathroom" || coord.codigo === "BANO");
+  const products = activeCoordinates.filter((coord) => !isSpecialCoordinate(coord));
+  const draftDeposit = draftCoordinates.find((coord) => getCoordinateKind(coord) === "deposit");
+  const draftBathroom = draftCoordinates.find((coord) => coord.kind === "bathroom" || coord.codigo === "BANO");
+  const draftProducts = draftCoordinates.filter((coord) => !isSpecialCoordinate(coord));
   const nextProductId =
     (draftProducts.length > 0 ? Math.max(...draftProducts.map((product) => product.id)) : 0) + 1;
   const warehouseConfig = useMemo<WarehouseConfig>(() => ({
@@ -116,9 +131,11 @@ export default function DistributionDetailPage() {
     shelvesBetweenStreets: distribution?.estanteriasPorCalle ?? DEFAULT_WAREHOUSE_CONFIG.shelvesBetweenStreets,
   }), [distribution]);
   const warehouseProducts = useMemo<WarehouseProduct[]>(() => activeCoordinates
-    .filter((coordinate) => !coordinate.isDeposit)
     .map((coordinate) => ({
       id: coordinate.id,
+      codigo: coordinate.codigo,
+      kind: coordinate.kind,
+      isDeposit: coordinate.isDeposit,
       x: coordinate.x,
       y: coordinate.y,
       name: coordinate.name,
@@ -157,9 +174,10 @@ export default function DistributionDetailPage() {
           ...current.coordinates,
           {
             id: nextProductId,
+            kind: "product",
             name: `Producto ${nextProductId}`,
             x: 0,
-            y: 0,
+            y: 1,
             weight: 1,
           },
         ],
@@ -173,7 +191,87 @@ export default function DistributionDetailPage() {
 
       return {
         ...current,
-        coordinates: current.coordinates.filter((coordinate) => coordinate.id !== id),
+        coordinates: current.coordinates.filter((coordinate) => coordinate.id !== id || getCoordinateKind(coordinate) !== "product"),
+      };
+    });
+  };
+
+  const handleCanvasAdd = (
+    x: number,
+    y: number,
+    aisle: number,
+    row: number,
+    shelfIndex: number,
+    slotSide: "top" | "bottom",
+    slotIndex: number,
+    kind: PlacementMode = "product",
+  ) => {
+    setDraftDistribution((current) => {
+      if (!current) return current;
+
+      if (kind === "deposit" || kind === "bathroom") {
+        const specialId = kind === "deposit" ? 0 : -1;
+        const specialCode = kind === "deposit" ? "DEPOSITO" : "BANO";
+        const specialName = kind === "deposit" ? "Depósito" : "Baño";
+        const currentSpecial = current.coordinates.find((coordinate) => getCoordinateKind(coordinate) === kind);
+
+        if (currentSpecial) {
+          return {
+            ...current,
+            coordinates: current.coordinates.map((coordinate) =>
+              getCoordinateKind(coordinate) === kind
+                ? { ...coordinate, x, y, aisle, row, shelfIndex, slotSide, slotIndex }
+                : coordinate,
+            ),
+          };
+        }
+
+        return {
+          ...current,
+          coordinates: [
+            {
+              id: specialId,
+              codigo: specialCode,
+              kind,
+              isDeposit: kind === "deposit",
+              name: specialName,
+              weight: 1,
+              x,
+              y,
+              aisle,
+              row,
+              shelfIndex,
+              slotSide,
+              slotIndex,
+            },
+            ...current.coordinates,
+          ],
+        };
+      }
+
+      const productIds = current.coordinates
+        .filter((coordinate) => getCoordinateKind(coordinate) === "product")
+        .map((coordinate) => coordinate.id);
+      const newProductId = (productIds.length > 0 ? Math.max(...productIds) : 0) + 1;
+
+      return {
+        ...current,
+        coordinates: [
+          ...current.coordinates,
+          {
+            id: newProductId,
+            kind: "product",
+            name: `Producto ${newProductId}`,
+            weight: 1,
+            x,
+            y,
+            aisle,
+            row,
+            shelfIndex,
+            slotSide,
+            slotIndex,
+          },
+        ],
       };
     });
   };
@@ -186,6 +284,7 @@ export default function DistributionDetailPage() {
   const cancelEditing = () => {
     setDraftDistribution(distribution);
     setIsEditing(false);
+    setPlacementMode("product");
   };
 
   const handleSave = async () => {
@@ -213,6 +312,7 @@ export default function DistributionDetailPage() {
       setDistribution(updatedDistribution);
       setDraftDistribution(updatedDistribution);
       setIsEditing(false);
+      setPlacementMode("product");
     } catch (saveError) {
       console.error("Error saving distribution:", saveError);
       setError("No se pudo guardar la distribucion");
@@ -279,6 +379,10 @@ export default function DistributionDetailPage() {
             <p className="text-xs uppercase tracking-wide text-slate-500">Depósito</p>
             <p className="mt-1 font-bold text-slate-900 dark:text-white">{deposit?.name || "DEPOSITO"}</p>
           </div>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Baño</p>
+            <p className="mt-1 font-bold text-slate-900 dark:text-white">{bathroom?.name || "BANO"}</p>
+          </div>
           </div>
           {!isEditing ? (
             <Button onClick={startEditing} className="gap-2">
@@ -319,6 +423,9 @@ export default function DistributionDetailPage() {
               </div>
               <div className="mt-3 text-sm text-slate-500">
                 Depósito: {draftDeposit ? `X ${draftDeposit.x.toFixed(1)} · Y ${draftDeposit.y.toFixed(1)}` : "sin datos"}
+              </div>
+              <div className="mt-3 text-sm text-slate-500">
+                Baño: {draftBathroom ? `X ${draftBathroom.x.toFixed(1)} · Y ${draftBathroom.y.toFixed(1)}` : "sin datos"}
               </div>
             </div>
 
@@ -408,17 +515,37 @@ export default function DistributionDetailPage() {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">Mapa</h2>
-                <p className="text-sm text-slate-500">Depósito en naranja y productos en azul</p>
+                <p className="text-sm text-slate-500">Depósito en naranja, baño en violeta y productos en azul</p>
               </div>
             </div>
+
+            {isEditing && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {([
+                  ["product", "Producto"],
+                  ["deposit", "Depósito"],
+                  ["bathroom", "Baño"],
+                ] as const).map(([value, label]) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    variant={placementMode === value ? "default" : "outline"}
+                    onClick={() => setPlacementMode(value)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            )}
 
             <div className="rounded-2xl border border-blue-100 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950/60">
               <WarehouseCanvas
                 config={warehouseConfig}
                 products={warehouseProducts}
-                onAddProduct={() => {}}
-                onRemoveProduct={() => {}}
-                readOnly
+                placementMode={placementMode}
+                onAddProduct={handleCanvasAdd}
+                onRemoveProduct={removeProduct}
+                readOnly={!isEditing}
               />
             </div>
           </CardContent>

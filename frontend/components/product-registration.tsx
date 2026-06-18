@@ -26,7 +26,7 @@ export function ProductRegistration({
 }: ProductRegistrationProps) {
   const [productName, setProductName] = useState("");
   const [xCoord, setXCoord] = useState("0.0");
-  const [yCoord, setYCoord] = useState("0.0");
+  const [yCoord, setYCoord] = useState("1.0");
   const [weight, setWeight] = useState(String(defaultWeight));
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export function ProductRegistration({
     onAddProduct(productName, x, y, w);
     setProductName("");
     setXCoord("0.0");
-    setYCoord("0.0");
+    setYCoord("1.0");
     setWeight(String(defaultWeight));
   };
 
