@@ -6,6 +6,9 @@ from ..infrastructure.Resultado import Resultado
 from ..infrastructure.Viaje import Viaje
 from core.algoritmos.Tsp import TSP
 from core.utils.UnidadDistancia import UnidadDistancia
+import math
+import random
+
 
 
 class Modelo(Heuristica):
@@ -64,6 +67,30 @@ class Modelo(Heuristica):
             
             for viaje in op.viajes:
                 tiempo_minimo += viaje.tiempo
+
+        #TODO: Calcular probabilidad de ir al baño y modificar 1 viaje por operario
+        for op in operarios:
+            lamda = 1/ 240 # va al baño 1 vez cada 4 horas promedio
+            tiempo_transcurrido = op.tiempo_acumulado
+            probabilidad_acumulada = self.distribucion_acumulada_exponencial(lamda, tiempo_transcurrido)
+            if probabilidad_acumulada > 0.8:
+
+                #Elijo un viaje al asar
+                viaje = random.choice(op.viajes)
+
+                camino_minimo = viaje.camino_minimo
+
+                #creo el baño
+                bano = Producto(nombre="bathroom", codigo="BANO", x=0, y=0, peso=0, codigo_pedido=0)
+                cantidad = 1
+
+                #elijo una posicion random dentro del camino minimo actual
+                indice = random.randint(0, len(camino_minimo))
+
+                #inserto el baño en la posicion random
+                camino_minimo.insert(indice, (bano, cantidad))
+
+                #TODO: calcular el tiempo con la matriz de distancia y actualizar el tiempo y distancia total del viaje que se modifico
 
         asignacion = {op: op.viajes for op in operarios}
 
@@ -166,3 +193,21 @@ class Modelo(Heuristica):
             raise ValueError("Se debe proveer una lista no vacía de operarios")
         if not isinstance(beta_picking, (int, float)) or beta_picking < 0:
             raise ValueError(f"beta_picking debe ser un número no negativo, se recibió: {beta_picking}")
+
+
+
+    def distribucion_acumulada_exponencial(self, lambd, tiempo):
+        """
+        Calcula F(t) = P(X <= t) para una distribución exponencial.
+
+        Parámetros:
+            lambd (float): parámetro λ (> 0)
+            tiempo (float): valor t
+
+        Retorna:
+            float: probabilidad acumulada
+        """
+        if tiempo < 0:
+            return 0.0
+
+        return 1 - math.exp(-lambd * tiempo)
