@@ -32,12 +32,21 @@ function getMaxShelfX(config: WarehouseConfig): number {
   return config.numAisles * (config.shelvesBetweenStreets + 1) + config.shelvesBetweenStreets - 1;
 }
 
+type PlacementMode = "product" | "deposit" | "bathroom";
+
+function getProductKind(product: WarehouseProduct): PlacementMode {
+  if (product.kind === "deposit" || product.isDeposit || product.codigo === "DEPOSITO") return "deposit";
+  if (product.kind === "bathroom" || product.codigo === "BANO") return "bathroom";
+  return "product";
+}
+
 export default function ProductMappingPage() {
   const [products, setProducts] = useState<WarehouseProduct[]>([]);
   const [nextId, setNextId] = useState(1);
   const [mappingName, setMappingName] = useState("Nueva distribucion");
   const [defaultWeight] = useState("5.5");
   const [config, setConfig] = useState<WarehouseConfig>(DEFAULT_CONFIG);
+  const [placementMode, setPlacementMode] = useState<PlacementMode>("product");
 
   useEffect(() => {
     const saved = localStorage.getItem("currentProductMapping");
@@ -46,7 +55,7 @@ export default function ProductMappingPage() {
         const parsed = JSON.parse(saved);
         setProducts(parsed);
         if (parsed.length > 0) {
-          const maxId = Math.max(...parsed.map((c: WarehouseProduct) => c.id));
+          const maxId = Math.max(...parsed.map((c: WarehouseProduct) => c.id).filter((id: number) => id > 0), 0);
           setNextId(maxId + 1);
         }
       } catch (e) {
@@ -59,9 +68,58 @@ export default function ProductMappingPage() {
     localStorage.setItem("currentProductMapping", JSON.stringify(products));
   }, [products]);
 
-  const handleAddProduct = (x: number, y: number, aisle: number, row: number, shelfIndex: number, slotSide: "top" | "bottom", slotIndex: number) => {
+  const handleAddProduct = (
+    x: number,
+    y: number,
+    aisle: number,
+    row: number,
+    shelfIndex: number,
+    slotSide: "top" | "bottom",
+    slotIndex: number,
+    kind: PlacementMode = "product",
+  ) => {
+    if (kind === "deposit") {
+      const deposit: WarehouseProduct = {
+        id: 0,
+        codigo: "DEPOSITO",
+        kind: "deposit",
+        isDeposit: true,
+        x,
+        y,
+        name: "Depósito",
+        weight: 1,
+        aisle,
+        row,
+        shelfIndex,
+        slotSide,
+        slotIndex,
+      };
+      setProducts((prev) => [deposit, ...prev.filter((product) => getProductKind(product) !== "deposit")]);
+      return;
+    }
+
+    if (kind === "bathroom") {
+      const bathroom: WarehouseProduct = {
+        id: -1,
+        codigo: "BANO",
+        kind: "bathroom",
+        x,
+        y,
+        name: "Baño",
+        weight: 1,
+        aisle,
+        row,
+        shelfIndex,
+        slotSide,
+        slotIndex,
+      };
+      setProducts((prev) => [bathroom, ...prev.filter((product) => getProductKind(product) !== "bathroom")]);
+      return;
+    }
+
     const newProduct: WarehouseProduct = {
       id: nextId,
+      kind: "product",
       x,
       y,
       name: `Producto ${nextId}`,
@@ -93,23 +151,40 @@ export default function ProductMappingPage() {
 
   const handleApplyWeightToAll = (weight: number) => {
     setProducts((prev) =>
-      prev.map((product) => ({ ...product, weight })),
+      prev.map((product) => getProductKind(product) === "product" ? { ...product, weight } : product),
     );
   };
 
   const handleSaveMapping = async () => {
-    if (products.length === 0) {
+    const normalProducts = products.filter((product) => getProductKind(product) === "product");
+    const hasDeposit = products.some((product) => getProductKind(product) === "deposit");
+    const hasBathroom = products.some((product) => getProductKind(product) === "bathroom");
+
+    if (normalProducts.length === 0) {
       alert("Please add at least one product before saving");
+      return;
+    }
+
+    if (!hasDeposit) {
+      alert("Selecciona el modo Depósito y ubicalo en la fila superior");
+      return;
+    }
+
+    if (!hasBathroom) {
+      alert("Selecciona el modo Baño y ubicalo en la fila superior");
       return;
     }
 
     try {
       const coordinates: Coordinate[] = products.map(p => ({
         id: p.id,
+        codigo: p.codigo,
         x: p.x,
         y: p.y,
         name: p.name,
         weight: p.weight,
+        isDeposit: p.isDeposit,
+        kind: p.kind,
         aisle: p.aisle,
         row: p.row,
         shelfIndex: p.shelfIndex,
@@ -126,6 +201,8 @@ export default function ProductMappingPage() {
           estanteriasPorCalle: config.shelvesBetweenStreets,
         },
       );
+
+      console.log("Payload ubicacion", JSON.stringify(payload, null, 2));
 
       const response = await fetch("/api/ubicaciones", {
         method: "POST",
@@ -154,12 +231,14 @@ export default function ProductMappingPage() {
     }
   };
 
-  const productsWithCoords: Coordinate[] = products.map(p => ({
+  const productsWithCoords: Coordinate[] = products.filter((p) => getProductKind(p) === "product").map(p => ({
     id: p.id,
+    codigo: p.codigo,
     x: p.x,
     y: p.y,
     name: p.name,
     weight: p.weight,
+    kind: p.kind,
     aisle: p.aisle,
     row: p.row,
     shelfIndex: p.shelfIndex,
@@ -204,9 +283,26 @@ export default function ProductMappingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <div className="bg-white dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-2xl p-6 shadow-lg">
+            <div className="mb-4 flex flex-wrap gap-2">
+              {([
+                ["product", "Producto"],
+                ["deposit", "Depósito"],
+                ["bathroom", "Baño"],
+              ] as const).map(([value, label]) => (
+                <Button
+                  key={value}
+                  type="button"
+                  variant={placementMode === value ? "default" : "outline"}
+                  onClick={() => setPlacementMode(value)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
             <WarehouseCanvas
               config={config}
               products={products}
+              placementMode={placementMode}
               onAddProduct={handleAddProduct}
               onRemoveProduct={handleRemoveProduct}
               readOnly={false}
@@ -225,9 +321,9 @@ export default function ProductMappingPage() {
             coordinates={productsWithCoords}
             onAddProduct={(name, x, y, weight) => {
               const aisle = Math.min(Math.max(0, Math.round(x)), getMaxShelfX(config));
-              const row = Math.min(Math.max(0, Math.round(y)), Math.max(0, config.numRows - 2));
-              if (aisle === 0 && row === 0) {
-                alert("La ubicacion 0,0 esta reservada para el deposito");
+              const row = Math.min(Math.max(1, Math.round(y)), Math.max(1, config.numRows - 1));
+              if (Math.round(y) === 0) {
+                alert("La fila Y 0 esta reservada para deposito y baño");
                 return;
               }
 
@@ -246,6 +342,7 @@ export default function ProductMappingPage() {
               const slotIndex = 0;
               const product: WarehouseProduct = {
                 id: nextId,
+                kind: "product",
                 x: aisle,
                 y: row,
                 name: name.trim() || `Producto ${nextId}`,

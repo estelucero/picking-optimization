@@ -6,6 +6,7 @@ y: number
 name: string
 weight?: number
 isDeposit?: boolean
+kind?: "product" | "deposit" | "bathroom"
 aisle?: number
 row?: number
 shelfIndex?: number
@@ -73,6 +74,7 @@ export interface BackendUbicacionDocument extends BackendUbicacionPayload {
 }
 
 const DEPOSITO_CODIGO = "DEPOSITO"
+const BANO_CODIGO = "BANO"
 const DEFAULT_CALLES_VERTICALES = 4
 const DEFAULT_CALLES_HORIZONTALES = 4
 const DEFAULT_ESTANTERIAS_POR_CALLE = 4
@@ -84,7 +86,8 @@ interface BackendLayoutConfig {
 }
 
 function getCodigoProducto(coordinate: Coordinate): string {
-  if (coordinate.isDeposit) return DEPOSITO_CODIGO
+  if (coordinate.kind === "deposit" || coordinate.isDeposit) return DEPOSITO_CODIGO
+  if (coordinate.kind === "bathroom" || coordinate.codigo === BANO_CODIGO) return BANO_CODIGO
 
   if (coordinate.codigo) return coordinate.codigo
 
@@ -114,17 +117,31 @@ export function toBackendPayload(
   coordinates: Coordinate[],
   config: BackendLayoutConfig = {},
 ): BackendUbicacionPayload {
-  const productCoordinates = coordinates.filter(
-    (coordinate) => !coordinate.isDeposit && !(coordinate.x === 0 && coordinate.y === 0),
+  const deposit = coordinates.find(
+    (coordinate) => coordinate.kind === "deposit" || coordinate.isDeposit || coordinate.codigo === DEPOSITO_CODIGO,
   )
+  const bathroom = coordinates.find(
+    (coordinate) => coordinate.kind === "bathroom" || coordinate.codigo === BANO_CODIGO,
+  )
+  const productCoordinates = coordinates.filter((coordinate) => {
+    const codigo = getCodigoProducto(coordinate)
+    return codigo !== DEPOSITO_CODIGO && codigo !== BANO_CODIGO
+  })
+
   const productos = [
-    {
-      codigo: DEPOSITO_CODIGO,
-      nombre: DEPOSITO_CODIGO,
-      peso: 1,
-      x: 0,
-      y: 0,
-    },
+    toBackendProducto(
+      deposit ?? {
+        id: 0,
+        codigo: DEPOSITO_CODIGO,
+        kind: "deposit",
+        name: "Depósito",
+        weight: 1,
+        x: 0,
+        y: 0,
+        isDeposit: true,
+      },
+    ),
+    ...(bathroom ? [toBackendProducto(bathroom)] : []),
     ...productCoordinates.map(toBackendProducto),
   ]
 
@@ -148,7 +165,7 @@ export function toBackendPayloadFromMapping(mapping: ProductMapping): BackendUbi
 
 export function fromBackendDocument(document: BackendUbicacionDocument): ProductMapping {
   const coordinates: Coordinate[] = document.productos
-    .filter((producto) => producto.codigo !== document.deposito)
+    .filter((producto) => producto.codigo !== document.deposito && producto.codigo !== BANO_CODIGO)
     .map((producto, index) => {
       return {
         id: getCoordinateId(producto.codigo, index + 1),
@@ -175,8 +192,9 @@ export function fromBackendDocument(document: BackendUbicacionDocument): Product
 
 export function fromBackendDocumentWithDeposit(document: BackendUbicacionDocument): ProductMapping {
   const deposit = document.productos.find((producto) => producto.codigo === document.deposito)
+  const bathroom = document.productos.find((producto) => producto.codigo === BANO_CODIGO)
   const productCoordinates = document.productos
-    .filter((producto) => producto.codigo !== document.deposito)
+    .filter((producto) => producto.codigo !== document.deposito && producto.codigo !== BANO_CODIGO)
     .map((producto, index) => {
       return {
         id: getCoordinateId(producto.codigo, index + 1),
@@ -198,10 +216,39 @@ export function fromBackendDocumentWithDeposit(document: BackendUbicacionDocumen
           name: deposit.nombre,
           weight: deposit.peso,
           isDeposit: true,
+          kind: "deposit",
         },
+        ...(bathroom
+          ? [
+              {
+                id: -1,
+                codigo: bathroom.codigo,
+                x: bathroom.x,
+                y: bathroom.y,
+                name: bathroom.nombre,
+                weight: bathroom.peso,
+                kind: "bathroom" as const,
+              },
+            ]
+          : []),
         ...productCoordinates,
       ]
-    : productCoordinates
+    : [
+        ...(bathroom
+          ? [
+              {
+                id: -1,
+                codigo: bathroom.codigo,
+                x: bathroom.x,
+                y: bathroom.y,
+                name: bathroom.nombre,
+                weight: bathroom.peso,
+                kind: "bathroom" as const,
+              },
+            ]
+          : []),
+        ...productCoordinates,
+      ]
 
   return {
     id: document.id,
