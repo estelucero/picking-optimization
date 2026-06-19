@@ -39,6 +39,7 @@ class Ubicaciones(Grafo):
     #* Matriz de distancia de x producto a y producto
     _distancias: dict[str, dict[str, UnidadDistancia]] = PrivateAttr(default_factory=dict)
 
+    #TODO: Configurable
     ancho_estanteria: float = 1.0
     ancho_calle_horizontal: float = 2.0
     alto_calle_vertical: float = 4
@@ -293,6 +294,10 @@ class Ubicaciones(Grafo):
             f"  nodos={nodos},\n"
             f"  total_aristas={sum(len(v) for v in self._distancias.values())}\n)"
         )
+    
+    def get_producto(self, codigo_producto: str):
+        return self._productos.get(codigo_producto)
+
 
     @computed_field
     @property
