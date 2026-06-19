@@ -6,6 +6,9 @@ from ..infrastructure.Resultado import Resultado
 from ..infrastructure.Viaje import Viaje
 from core.algoritmos.Tsp import TSP
 from core.utils.UnidadDistancia import UnidadDistancia
+import math
+import random
+
 
 
 class Modelo(Heuristica):
@@ -64,6 +67,43 @@ class Modelo(Heuristica):
             
             for viaje in op.viajes:
                 tiempo_minimo += viaje.tiempo
+
+        #Agrega falla al finalizar todos los viajes
+        #TODO: Calcular probabilidad de ir al baño y modificar 1 viaje por operario
+        for op in operarios:
+            #TODO: Esto deberia ser configurable
+            lamda = 1/ 3 # va al baño 1 vez cada 4 horas promedio
+            tiempo_transcurrido = op.tiempo_acumulado
+            probabilidad_acumulada = self.distribucion_acumulada_exponencial(lamda, tiempo_transcurrido)
+            if probabilidad_acumulada > 0.8:
+
+                #Elijo un viaje al azar
+                viaje = random.choice(op.viajes)
+
+                camino_minimo = viaje.camino_minimo
+
+                bano = self._tsp.grafo.get_producto("BANO")
+                cantidad = 1
+                indices_camino_minimo = len(camino_minimo) - 1 
+
+                #elijo una posicion random dentro del camino minimo actual
+                indice = random.randint(0, indices_camino_minimo)
+
+                #inserto el baño en la posicion random
+                camino_minimo.insert(indice, (bano, cantidad))
+
+                origen_a_bano = UnidadDistancia(metros=0)
+                if indice > 0 or indice == indices_camino_minimo:
+                    origen = camino_minimo[indice - 1][0].codigo 
+                    origen_a_bano = self._tsp.grafo.distancia(origen,bano.codigo)
+                
+                #Va y vuelve al mismo lugar para ir al baño
+                metros_totales = origen_a_bano.valor * 2 + viaje.distancia.metros
+                nueva_distancia = UnidadDistancia(metros=metros_totales)
+                viaje.distancia = nueva_distancia
+                viaje.tiempo = nueva_distancia.valor / op.velocidad.metros_por_minuto + viaje.tiempo
+
+
 
         asignacion = {op: op.viajes for op in operarios}
 
@@ -166,3 +206,21 @@ class Modelo(Heuristica):
             raise ValueError("Se debe proveer una lista no vacía de operarios")
         if not isinstance(beta_picking, (int, float)) or beta_picking < 0:
             raise ValueError(f"beta_picking debe ser un número no negativo, se recibió: {beta_picking}")
+
+
+
+    def distribucion_acumulada_exponencial(self, lambd, tiempo):
+        """
+        Calcula F(t) = P(X <= t) para una distribución exponencial.
+
+        Parámetros:
+            lambd (float): parámetro λ (> 0)
+            tiempo (float): valor t
+
+        Retorna:
+            float: probabilidad acumulada
+        """
+        if tiempo < 0:
+            return 0.0
+
+        return 1 - math.exp(-lambd * tiempo)

@@ -12,3 +12,8 @@ class Grafo(BaseModel, ABC):
     def nodos(self) -> set:
         """Retorna el conjunto de todas las ubicaciones del grafo."""
         pass
+
+    @abstractmethod
+    def get_producto(self, codigo: str) -> object:
+        """Retorna el objeto"""
+        pass

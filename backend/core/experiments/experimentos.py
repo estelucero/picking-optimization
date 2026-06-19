@@ -56,13 +56,14 @@ class Experimentos:
     def __init__(self, productos: list[Producto], configuracion: ConfiguracionExperimento):
         self._productos = productos
         self._configuracion = configuracion
+        codigos_no_pickeables = {configuracion.deposito, "BANO"}
 
         codigos = {producto.codigo for producto in productos}
         if configuracion.deposito not in codigos:
             raise ValueError("El deposito configurado no existe en productos")
 
         self._productos_sin_deposito = [
-            producto for producto in productos if producto.codigo != configuracion.deposito
+            producto for producto in productos if producto.codigo not in codigos_no_pickeables
         ]
         if not self._productos_sin_deposito:
             raise ValueError("Se requiere al menos un producto distinto del deposito")

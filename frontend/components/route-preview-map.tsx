@@ -21,12 +21,21 @@ type LogicalPoint = {
   y: number;
 };
 
+type RoutePoint = LogicalPoint & {
+  bathroomFromPrevious?: boolean;
+};
+
 type RouteMarker = LogicalPoint & {
   label: string;
   markerType: "start" | "visit" | "return";
 };
 
 type RouteNode = LogicalPoint & {
+  codeCandidates: string[];
+};
+
+type RouteMarkerInput = LogicalPoint & {
+  label: string;
   codeCandidates: string[];
 };
 
@@ -39,6 +48,7 @@ type DrawableSegment = {
   from: CanvasPoint;
   to: CanvasPoint;
   orientation: "horizontal" | "vertical";
+  routeKind: "normal" | "bathroom";
   rangeStart: number;
   rangeEnd: number;
   lane: number;
@@ -66,6 +76,18 @@ const DEFAULT_LAYOUT = {
   shelfWidth: 1,
 };
 
+function isDepositCoordinate(coord: Coordinate): boolean {
+  return Boolean(coord.isDeposit) || coord.kind === "deposit" || coord.codigo === "DEPOSITO";
+}
+
+function isBathroomCoordinate(coord: Coordinate): boolean {
+  return coord.kind === "bathroom" || coord.codigo === "BANO";
+}
+
+function isSpecialCoordinate(coord: Coordinate): boolean {
+  return isDepositCoordinate(coord) || isBathroomCoordinate(coord);
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -85,14 +107,14 @@ function getLayout(layoutConfig?: RoutePreviewMapProps["layoutConfig"]) {
   const widthUnits =
     shelfCols * DEFAULT_LAYOUT.shelfWidth +
     verticalStreets * DEFAULT_LAYOUT.verticalStreetWidth;
-  const heightUnits = shelfRows + horizontalStreets * DEFAULT_LAYOUT.horizontalStreetHeight;
+  const heightUnits = (shelfRows + 1) + horizontalStreets * DEFAULT_LAYOUT.horizontalStreetHeight;
   const scale = Math.min(usableW / Math.max(widthUnits, 1), usableH / Math.max(heightUnits, 1));
   const shelfW = DEFAULT_LAYOUT.shelfWidth * scale;
   const shelfH = scale;
   const vStreetW = DEFAULT_LAYOUT.verticalStreetWidth * scale;
   const hStreetH = DEFAULT_LAYOUT.horizontalStreetHeight * scale;
   const gridW = shelfCols * shelfW + verticalStreets * vStreetW;
-  const gridH = shelfRows * shelfH + horizontalStreets * hStreetH;
+  const gridH = (shelfRows + 1) * shelfH + horizontalStreets * hStreetH;
 
   return {
     verticalStreets,
@@ -139,13 +161,18 @@ function getVerticalStreetIndex(logicalX: number, shelvesBetweenVertical: number
 }
 
 function getRowY(layout: Layout, logicalY: number): number {
-  const row = clamp(Math.round(logicalY), 0, layout.shelfRows - 1);
-  return layout.startY + layout.hStreetH + row * (layout.shelfH + layout.hStreetH) + layout.shelfH / 2;
+  const roundedY = Math.round(logicalY);
+  if (roundedY <= 0) {
+    return layout.startY + layout.shelfH / 2;
+  }
+
+  const row = clamp(roundedY - 1, 0, layout.shelfRows - 1);
+  return layout.startY + layout.shelfH + layout.hStreetH + row * (layout.shelfH + layout.hStreetH) + layout.shelfH / 2;
 }
 
 function getStreetY(layout: Layout, logicalY: number): number {
   const street = clamp(Math.round(logicalY), 0, Math.max(0, layout.horizontalStreets - 1));
-  return layout.startY + street * (layout.shelfH + layout.hStreetH) + layout.hStreetH / 2;
+  return layout.startY + layout.shelfH + street * (layout.shelfH + layout.hStreetH) + layout.hStreetH / 2;
 }
 
 function toCanvasPoint(point: LogicalPoint, layout: Layout, mode: "marker" | "route" = "marker") {
@@ -170,7 +197,7 @@ function drawLayout(ctx: CanvasRenderingContext2D, layout: Layout) {
   ctx.fillRect(layout.startX - 8, layout.startY - 8, layout.gridW + 16, layout.gridH + 16);
 
   for (let row = 0; row < layout.horizontalStreets; row += 1) {
-    const y = layout.startY + row * (layout.shelfH + layout.hStreetH);
+    const y = layout.startY + layout.shelfH + row * (layout.shelfH + layout.hStreetH);
     ctx.fillStyle = "#bbf7d0";
     ctx.fillRect(layout.startX, y, layout.gridW, layout.hStreetH);
   }
@@ -184,11 +211,50 @@ function drawLayout(ctx: CanvasRenderingContext2D, layout: Layout) {
     ctx.fillRect(x, layout.startY, layout.vStreetW, layout.gridH);
   }
 
+  let topXCursor = layout.startX;
+  for (let block = 0; block < layout.verticalStreets + 1; block += 1) {
+    for (let shelf = 0; shelf < layout.shelvesBetweenVertical; shelf += 1) {
+      ctx.fillStyle = "#f8fafc";
+      ctx.fillRect(topXCursor, layout.startY, layout.shelfW, layout.shelfH);
+
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(topXCursor, layout.startY);
+      ctx.lineTo(topXCursor, layout.startY + layout.shelfH);
+      ctx.moveTo(topXCursor + layout.shelfW, layout.startY);
+      ctx.lineTo(topXCursor + layout.shelfW, layout.startY + layout.shelfH);
+      ctx.moveTo(topXCursor, layout.startY + layout.shelfH);
+      ctx.lineTo(topXCursor + layout.shelfW, layout.startY + layout.shelfH);
+      ctx.stroke();
+
+      topXCursor += layout.shelfW;
+    }
+
+    if (block < layout.verticalStreets) {
+      ctx.fillStyle = "#f8fafc";
+      ctx.fillRect(topXCursor, layout.startY, layout.vStreetW, layout.shelfH);
+
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(topXCursor, layout.startY);
+      ctx.lineTo(topXCursor, layout.startY + layout.shelfH);
+      ctx.moveTo(topXCursor + layout.vStreetW, layout.startY);
+      ctx.lineTo(topXCursor + layout.vStreetW, layout.startY + layout.shelfH);
+      ctx.moveTo(topXCursor, layout.startY + layout.shelfH);
+      ctx.lineTo(topXCursor + layout.vStreetW, layout.startY + layout.shelfH);
+      ctx.stroke();
+
+      topXCursor += layout.vStreetW;
+    }
+  }
+
   for (let row = 0; row < layout.shelfRows; row += 1) {
     let xCursor = layout.startX;
     for (let block = 0; block < layout.verticalStreets + 1; block += 1) {
       for (let shelf = 0; shelf < layout.shelvesBetweenVertical; shelf += 1) {
-        const y = layout.startY + layout.hStreetH + row * (layout.shelfH + layout.hStreetH);
+        const y = layout.startY + layout.shelfH + layout.hStreetH + row * (layout.shelfH + layout.hStreetH);
         const shelfX = xCursor;
         ctx.fillStyle = "#475569";
         ctx.fillRect(shelfX, y, layout.shelfW, layout.shelfH);
@@ -221,11 +287,12 @@ function drawLayout(ctx: CanvasRenderingContext2D, layout: Layout) {
 function drawPoints(ctx: CanvasRenderingContext2D, coordinates: Coordinate[], layout: Layout) {
   coordinates.forEach((coord, index) => {
     const canvasPoint = toCanvasPoint(coord, layout);
-    const isDeposit = Boolean(coord.isDeposit);
+    const isDeposit = isDepositCoordinate(coord);
+    const isBathroom = isBathroomCoordinate(coord);
     const productLabel = Number.isFinite(coord.id) ? String(coord.id) : String(index + 1);
 
     ctx.beginPath();
-    if (isDeposit) {
+    if (isDeposit || isBathroom) {
       ctx.rect(
         canvasPoint.x - DEPOSIT_SIZE / 2,
         canvasPoint.y - DEPOSIT_SIZE / 2,
@@ -235,10 +302,10 @@ function drawPoints(ctx: CanvasRenderingContext2D, coordinates: Coordinate[], la
     } else {
       ctx.arc(canvasPoint.x, canvasPoint.y, PRODUCT_RADIUS, 0, Math.PI * 2);
     }
-    ctx.fillStyle = isDeposit ? "#ea580c" : "#0891b2";
+    ctx.fillStyle = isDeposit ? "#ea580c" : isBathroom ? "#8b5cf6" : "#0891b2";
     ctx.fill();
 
-    ctx.strokeStyle = isDeposit ? "#c2410c" : "#e0f2fe";
+    ctx.strokeStyle = isDeposit ? "#c2410c" : isBathroom ? "#6d28d9" : "#e0f2fe";
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -246,7 +313,7 @@ function drawPoints(ctx: CanvasRenderingContext2D, coordinates: Coordinate[], la
     ctx.font = "bold 10px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(isDeposit ? "D" : productLabel, canvasPoint.x, canvasPoint.y);
+    ctx.fillText(isDeposit ? "D" : isBathroom ? "B" : productLabel, canvasPoint.x, canvasPoint.y);
   });
 }
 
@@ -256,6 +323,7 @@ function drawDirectionArrow(
   fromY: number,
   toX: number,
   toY: number,
+  color = "#b91c1c",
 ) {
   const dx = toX - fromX;
   const dy = toY - fromY;
@@ -279,7 +347,7 @@ function drawDirectionArrow(
   ctx.lineTo(baseX + perpX * (arrowSize * 0.6), baseY + perpY * (arrowSize * 0.6));
   ctx.lineTo(baseX - perpX * (arrowSize * 0.6), baseY - perpY * (arrowSize * 0.6));
   ctx.closePath();
-  ctx.fillStyle = "#b91c1c";
+  ctx.fillStyle = color;
   ctx.fill();
 }
 
@@ -414,9 +482,11 @@ function resolveProductLabel(
   coordinates: Coordinate[],
   fallback: number,
 ): string {
+  if (item.codigo === "BANO") return "B";
+
   const byCoordinate = coordinates.find(
     (coord) =>
-      !coord.isDeposit &&
+      !isSpecialCoordinate(coord) &&
       Math.abs(coord.x - item.x) < 0.001 &&
       Math.abs(coord.y - item.y) < 0.001,
   );
@@ -436,7 +506,7 @@ function resolveProductLabel(
 function findCoordinateForRouteItem(item: BackendOperarioRutaItem, coordinates: Coordinate[]) {
   return coordinates.find(
     (coord) =>
-      !coord.isDeposit &&
+      !isSpecialCoordinate(coord) &&
       Math.abs(coord.x - item.x) < 0.001 &&
       Math.abs(coord.y - item.y) < 0.001,
   );
@@ -473,11 +543,50 @@ function buildDepositCodeCandidates(deposit?: Coordinate): string[] {
   return Array.from(new Set(["DEPOSITO", deposit?.codigo].filter((value): value is string => Boolean(value))));
 }
 
-function buildRouteNodes(coordinates: Coordinate[], route: BackendOperarioRutaItem[]): RouteNode[] {
-  const deposit = coordinates.find((coord) => coord.isDeposit) ?? { x: 0, y: 0 };
-  const depositCodeCandidates = buildDepositCodeCandidates("isDeposit" in deposit ? deposit : undefined);
+function isBathroomRouteNode(node: RouteNode): boolean {
+  return node.codeCandidates.includes("BANO");
+}
 
-  return [
+function isBathroomRouteMarker(marker: RouteMarkerInput): boolean {
+  return marker.codeCandidates.includes("BANO");
+}
+
+function expandBathroomReturnNodes(nodes: RouteNode[]): RouteNode[] {
+  const expanded: RouteNode[] = [];
+
+  nodes.forEach((node) => {
+    const previous = expanded[expanded.length - 1];
+    expanded.push(node);
+
+    if (previous && isBathroomRouteNode(node)) {
+      expanded.push(previous);
+    }
+  });
+
+  return expanded;
+}
+
+function expandBathroomReturnMarkers(markers: RouteMarkerInput[]): RouteMarkerInput[] {
+  const expanded: RouteMarkerInput[] = [];
+
+  markers.forEach((marker) => {
+    const previous = expanded[expanded.length - 1];
+    expanded.push(marker);
+
+    if (previous && isBathroomRouteMarker(marker)) {
+      expanded.push(previous);
+    }
+  });
+
+  return expanded;
+}
+
+function buildRouteNodes(coordinates: Coordinate[], route: BackendOperarioRutaItem[]): RouteNode[] {
+  const depositCoordinate = coordinates.find(isDepositCoordinate);
+  const deposit = depositCoordinate ?? { x: 0, y: 0 };
+  const depositCodeCandidates = buildDepositCodeCandidates(depositCoordinate);
+
+  return expandBathroomReturnNodes([
     {
       x: deposit.x,
       y: deposit.y,
@@ -493,7 +602,7 @@ function buildRouteNodes(coordinates: Coordinate[], route: BackendOperarioRutaIt
       y: deposit.y,
       codeCandidates: depositCodeCandidates,
     },
-  ];
+  ]);
 }
 
 function isVerticalStreetPoint(point: LogicalPoint, layout: Layout): boolean {
@@ -530,39 +639,40 @@ function getPreferredVerticalStreetX(from: LogicalPoint, to: LogicalPoint, layou
   }, getNearestVerticalStreetX(from, layout));
 }
 
-function pushPoint(points: LogicalPoint[], point: LogicalPoint) {
+function pushRoutePoint(points: RoutePoint[], point: LogicalPoint, bathroomFromPrevious?: boolean) {
   const last = points[points.length - 1];
   if (last && Math.round(last.x) === Math.round(point.x) && Math.round(last.y) === Math.round(point.y)) {
     return;
   }
 
-  points.push(point);
+  points.push({ ...point, bathroomFromPrevious });
 }
 
-function expandOrthogonalPolyline(points: LogicalPoint[], layout: Layout): LogicalPoint[] {
+function expandOrthogonalPolyline(points: RoutePoint[], layout: Layout): RoutePoint[] {
   if (points.length < 2) return points;
 
-  const expanded: LogicalPoint[] = [points[0]];
+  const expanded: RoutePoint[] = [points[0]];
 
   for (let index = 1; index < points.length; index += 1) {
     const from = expanded[expanded.length - 1];
     const to = points[index];
+    const bathroomFromPrevious = Boolean(to.bathroomFromPrevious);
     const sameX = Math.round(from.x) === Math.round(to.x);
     const sameY = Math.round(from.y) === Math.round(to.y);
 
     if (!sameY) {
       const streetX = getPreferredVerticalStreetX(from, to, layout);
-      pushPoint(expanded, { x: streetX, y: from.y });
-      pushPoint(expanded, { x: streetX, y: to.y });
+      pushRoutePoint(expanded, { x: streetX, y: from.y }, bathroomFromPrevious);
+      pushRoutePoint(expanded, { x: streetX, y: to.y }, bathroomFromPrevious);
 
       if (!sameX || Math.round(to.x) !== streetX) {
-        pushPoint(expanded, to);
+        pushRoutePoint(expanded, to, bathroomFromPrevious);
       }
 
       continue;
     }
 
-    pushPoint(expanded, to);
+    pushRoutePoint(expanded, to, bathroomFromPrevious);
   }
 
   return expanded;
@@ -573,18 +683,19 @@ function buildPolyline(
   route: BackendOperarioRutaItem[],
   layout: Layout,
   caminos?: DistributionPaths,
-): LogicalPoint[] {
+): RoutePoint[] {
   const nodes = buildRouteNodes(coordinates, route);
-  const points: LogicalPoint[] = [];
+  const points: RoutePoint[] = [];
 
   for (let index = 1; index < nodes.length; index += 1) {
     const from = nodes[index - 1];
     const to = nodes[index];
     const segment = getStoredPath(caminos, from, to) ?? [from, to];
+    const bathroomSegment = isBathroomRouteNode(from) || isBathroomRouteNode(to);
 
     segment.forEach((point, pointIndex) => {
       if (index > 1 && pointIndex === 0) return;
-      points.push(point);
+      points.push({ ...point, bathroomFromPrevious: pointIndex > 0 && bathroomSegment });
     });
   }
 
@@ -592,31 +703,41 @@ function buildPolyline(
 }
 
 function buildRouteMarkers(coordinates: Coordinate[], route: BackendOperarioRutaItem[]): RouteMarker[] {
-  const deposit = coordinates.find((coord) => coord.isDeposit) ?? { x: 0, y: 0 };
-
-  return [
+  const deposit = coordinates.find(isDepositCoordinate) ?? { x: 0, y: 0 };
+  const markerInputs = expandBathroomReturnMarkers([
     {
       x: deposit.x,
       y: deposit.y,
       label: "S",
-      markerType: "start",
+      codeCandidates: ["DEPOSITO"],
     },
     ...route.map((item, index) => ({
       x: item.x,
       y: item.y,
       label: resolveProductLabel(item, coordinates, index),
-      markerType: "visit" as const,
+      codeCandidates: buildCodeCandidates(item, coordinates),
     })),
     {
       x: deposit.x,
       y: deposit.y,
       label: "R",
-      markerType: "return",
+      codeCandidates: ["DEPOSITO"],
     },
-  ];
+  ]);
+
+  return markerInputs.map((marker, index) => {
+    const markerType: RouteMarker["markerType"] = index === 0 ? "start" : index === markerInputs.length - 1 ? "return" : "visit";
+
+    return {
+      x: marker.x,
+      y: marker.y,
+      label: marker.label,
+      markerType,
+    };
+  });
 }
 
-function buildDrawableSegments(polyline: LogicalPoint[], layout: Layout): DrawableSegment[] {
+function buildDrawableSegments(polyline: RoutePoint[], layout: Layout): DrawableSegment[] {
   const segments: DrawableSegment[] = [];
   const groups = new Map<string, number[]>();
 
@@ -646,6 +767,7 @@ function buildDrawableSegments(polyline: LogicalPoint[], layout: Layout): Drawab
       from,
       to,
       orientation,
+      routeKind: logicalTo.bathroomFromPrevious ? "bathroom" : "normal",
       rangeStart,
       rangeEnd,
       lane: 0,
@@ -694,6 +816,29 @@ function buildDrawableSegments(polyline: LogicalPoint[], layout: Layout): Drawab
   return segments;
 }
 
+function groupConsecutiveSegments(segments: OffsetDrawableSegment[]): OffsetDrawableSegment[][] {
+  const groups: OffsetDrawableSegment[][] = [];
+  let currentGroup: OffsetDrawableSegment[] = [];
+
+  segments.forEach((segment) => {
+    if (segment.routeKind !== "bathroom") {
+      if (currentGroup.length > 0) {
+        groups.push(currentGroup);
+        currentGroup = [];
+      }
+      return;
+    }
+
+    currentGroup.push(segment);
+  });
+
+  if (currentGroup.length > 0) {
+    groups.push(currentGroup);
+  }
+
+  return groups;
+}
+
 function drawRoute(
   ctx: CanvasRenderingContext2D,
   polyline: LogicalPoint[],
@@ -710,12 +855,26 @@ function drawRoute(
       };
     });
     const routePoints = buildOffsetRoutePoints(segments);
+    const bathroomSegmentGroups = groupConsecutiveSegments(segments);
 
     drawRoutePath(ctx, routePoints, "rgba(255,255,255,0.85)", 6);
     drawRoutePath(ctx, routePoints, "#dc2626", 3);
 
+    bathroomSegmentGroups.forEach((group) => {
+      const bathroomRoutePoints = buildOffsetRoutePoints(group);
+      drawRoutePath(ctx, bathroomRoutePoints, "rgba(255,255,255,0.9)", 7);
+      drawRoutePath(ctx, bathroomRoutePoints, "#2563eb", 4);
+    });
+
     segments.forEach((segment) => {
-      drawDirectionArrow(ctx, segment.offsetFrom.x, segment.offsetFrom.y, segment.offsetTo.x, segment.offsetTo.y);
+      drawDirectionArrow(
+        ctx,
+        segment.offsetFrom.x,
+        segment.offsetFrom.y,
+        segment.offsetTo.x,
+        segment.offsetTo.y,
+        segment.routeKind === "bathroom" ? "#1d4ed8" : "#b91c1c",
+      );
     });
   }
 
