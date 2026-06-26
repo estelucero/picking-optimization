@@ -69,7 +69,6 @@ class Modelo(Heuristica):
                 tiempo_minimo += viaje.tiempo
 
         #Agrega falla al finalizar todos los viajes
-        #TODO: Calcular probabilidad de ir al baño y modificar 1 viaje por operario
         self.agregarViajeAlBano(operarios)
 
 
@@ -103,14 +102,20 @@ class Modelo(Heuristica):
 
                 origen_a_bano = UnidadDistancia(metros=0)
                 if indice > 0 or indice == indices_camino_minimo:
+                    #codigo de producto actual
                     origen = camino_minimo[indice - 1][0].codigo
+                    #distancia hasta el baño
                     origen_a_bano = self._tsp.grafo.distancia(origen, bano.codigo)
 
                 # Va y vuelve al mismo lugar para ir al baño
-                metros_totales = origen_a_bano.valor * 2 + viaje.distancia.metros
+                distancia_idea_y_vuelta_bano = origen_a_bano.valor * 2
+                metros_totales = distancia_idea_y_vuelta_bano + viaje.distancia.metros
                 nueva_distancia = UnidadDistancia(metros=metros_totales)
                 viaje.distancia = nueva_distancia
-                viaje.tiempo = nueva_distancia.valor / op.velocidad.metros_por_minuto + viaje.tiempo
+                tiempo_en_bano = 5.0
+                tiempo_viaje_bano = distancia_idea_y_vuelta_bano / op.velocidad.metros_por_minuto + tiempo_en_bano
+                viaje.tiempo_muerto = tiempo_viaje_bano
+                viaje.tiempo = tiempo_viaje_bano + viaje.tiempo
 
     def _desempaquetar_pedidos(self, pedidos: list[Pedido]) -> list[tuple[Producto, int]]:
         """Desempaqueta todos los pedidos en una lista de (producto, cantidad)."""
