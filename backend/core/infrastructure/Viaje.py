@@ -14,6 +14,7 @@ class Viaje(BaseModel):
     #productos: dict[Producto, int] = Field(..., min_length=1)
     distancia: float = Field(..., ge=0)
     tiempo: float = Field(..., ge=0)
+    tiempo_muerto: float = Field(..., ge=0) #viaje al baño
     secuencia: list[tuple[Producto,int]]
     camino_minimo: list[tuple[Producto,int]]
     

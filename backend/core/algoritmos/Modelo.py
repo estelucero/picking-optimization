@@ -69,45 +69,53 @@ class Modelo(Heuristica):
                 tiempo_minimo += viaje.tiempo
 
         #Agrega falla al finalizar todos los viajes
-        #TODO: Calcular probabilidad de ir al baño y modificar 1 viaje por operario
-        for op in operarios:
-            #TODO: Esto deberia ser configurable
-            lamda = 1/ 3 # va al baño 1 vez cada 4 horas promedio
-            tiempo_transcurrido = op.tiempo_acumulado
-            probabilidad_acumulada = self.distribucion_acumulada_exponencial(lamda, tiempo_transcurrido)
-            if probabilidad_acumulada > 0.8:
-
-                #Elijo un viaje al azar
-                viaje = random.choice(op.viajes)
-
-                camino_minimo = viaje.camino_minimo
-
-                bano = self._tsp.grafo.get_producto("BANO")
-                cantidad = 1
-                indices_camino_minimo = len(camino_minimo) - 1 
-
-                #elijo una posicion random dentro del camino minimo actual
-                indice = random.randint(0, indices_camino_minimo)
-
-                #inserto el baño en la posicion random
-                camino_minimo.insert(indice, (bano, cantidad))
-
-                origen_a_bano = UnidadDistancia(metros=0)
-                if indice > 0 or indice == indices_camino_minimo:
-                    origen = camino_minimo[indice - 1][0].codigo 
-                    origen_a_bano = self._tsp.grafo.distancia(origen,bano.codigo)
-                
-                #Va y vuelve al mismo lugar para ir al baño
-                metros_totales = origen_a_bano.valor * 2 + viaje.distancia.metros
-                nueva_distancia = UnidadDistancia(metros=metros_totales)
-                viaje.distancia = nueva_distancia
-                viaje.tiempo = nueva_distancia.valor / op.velocidad.metros_por_minuto + viaje.tiempo
+        self.agregarViajeAlBano(operarios)
 
 
 
         asignacion = {op: op.viajes for op in operarios}
 
         return Resultado(tiempo_minimo=tiempo_minimo, asignacion=asignacion)
+
+    def agregarViajeAlBano(self, operarios):
+        for op in operarios:
+            # TODO: Esto deberia ser configurable
+            lamda = 1 / 3  # va al baño 1 vez cada 4 horas promedio
+            tiempo_transcurrido = op.tiempo_acumulado
+            probabilidad_acumulada = self.distribucion_acumulada_exponencial(lamda, tiempo_transcurrido)
+            if probabilidad_acumulada > 0.8:
+
+                # Elijo un viaje al azar
+                viaje = random.choice(op.viajes)
+
+                camino_minimo = viaje.camino_minimo
+
+                bano = self._tsp.grafo.get_producto("BANO")
+                cantidad = 1
+                indices_camino_minimo = len(camino_minimo) - 1
+
+                # elijo una posicion random dentro del camino minimo actual
+                indice = random.randint(0, indices_camino_minimo)
+
+                # inserto el baño en la posicion random
+                camino_minimo.insert(indice, (bano, cantidad))
+
+                origen_a_bano = UnidadDistancia(metros=0)
+                if indice > 0 or indice == indices_camino_minimo:
+                    #codigo de producto actual
+                    origen = camino_minimo[indice - 1][0].codigo
+                    #distancia hasta el baño
+                    origen_a_bano = self._tsp.grafo.distancia(origen, bano.codigo)
+
+                # Va y vuelve al mismo lugar para ir al baño
+                distancia_idea_y_vuelta_bano = origen_a_bano.valor * 2
+                metros_totales = distancia_idea_y_vuelta_bano + viaje.distancia.metros
+                nueva_distancia = UnidadDistancia(metros=metros_totales)
+                viaje.distancia = nueva_distancia
+                tiempo_en_bano = 5.0
+                tiempo_viaje_bano = distancia_idea_y_vuelta_bano / op.velocidad.metros_por_minuto + tiempo_en_bano
+                viaje.tiempo_muerto = tiempo_viaje_bano
+                viaje.tiempo = tiempo_viaje_bano + viaje.tiempo
 
     def _desempaquetar_pedidos(self, pedidos: list[Pedido]) -> list[tuple[Producto, int]]:
         """Desempaqueta todos los pedidos en una lista de (producto, cantidad)."""

@@ -143,6 +143,7 @@ class Experimentos:
                 #calculo distancia total
                 distancia_total = 0.0
                 operario_models: list[OperarioModel] = []
+                tiempo_muerto_total = 0.0
 
                 for operario, viajes in resultado.asignacion.items():
 
@@ -167,6 +168,9 @@ class Experimentos:
                                       capacidad_max_peso=operario.carro.capacidad_max_peso,
                                       ruta=ruta))
 
+                        #sumar tiempos muertos
+                        tiempo_muerto_total = tiempo_muerto_total + viaje.tiempo_muerto
+
 
 
                 run_preview = RunPreview(experimento_preview_id=created_experimento_preview["id"],
@@ -182,6 +186,9 @@ class Experimentos:
                 metricas.append(Metrica(nombre="Pedidos", valor=len(pedidos)))
                 metricas.append(Metrica(nombre="Distancia total", valor=distancia_total))
                 metricas.append(Metrica(nombre="Operarios", valor=cantidad_operarios))
+                metricas.append(Metrica(nombre="Tiempo no productivo", valor=tiempo_muerto_total))
+                metricas.append(Metrica(nombre="Tiempo productivo", valor=resultado.tiempo_minimo - tiempo_muerto_total))
+
 
 
 

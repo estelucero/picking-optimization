@@ -23,7 +23,7 @@ class Operario(BaseModel):
     velocidad: Velocidad
     carro: Carro
     viajes: List[Viaje] = Field(default_factory=list) 
-    viaje_actual: Viaje = Viaje(distancia=0, tiempo=0, secuencia=[], camino_minimo=[])
+    viaje_actual: Viaje = Viaje(distancia=0, tiempo=0,tiempo_muerto= 0, secuencia=[], camino_minimo=[] )
     tiempo_acumulado: float = 0
 
     @field_validator('codigo', 'nombre', mode='before')
@@ -57,7 +57,7 @@ class Operario(BaseModel):
 
         self.viajes.append(self.viaje_actual)
         self.agregar_tiempo(self.viaje_actual.tiempo)
-        self.viaje_actual = Viaje(distancia=0, tiempo=0, secuencia=[], camino_minimo=[])
+        self.viaje_actual = Viaje(distancia=0, tiempo=0, secuencia=[], camino_minimo=[], tiempo_muerto=0)
         self.carro.vaciar()
         
 
