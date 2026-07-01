@@ -59,7 +59,7 @@ class Modelo(Heuristica):
 
                 # mejor_operario.agregar_tiempo(mejor_tiempo)
                 # self._agregar_producto(mejor_operario, producto, cantidad, mejor_tiempo, distancia, secuencia)
-    
+
         for op in operarios:
             #!A revisar
             if op.carro.peso_batch_actual() > 0:
@@ -69,15 +69,17 @@ class Modelo(Heuristica):
                 tiempo_minimo += viaje.tiempo
 
         #Agrega falla al finalizar todos los viajes
-        self.agregarViajeAlBano(operarios)
+        tiempo_extra = self.agregarViajeAlBano(operarios)
 
-
+        tiempo_minimo += tiempo_extra
 
         asignacion = {op: op.viajes for op in operarios}
 
         return Resultado(tiempo_minimo=tiempo_minimo, asignacion=asignacion)
 
     def agregarViajeAlBano(self, operarios):
+
+        tiempo_extra = 0
         for op in operarios:
             # TODO: Esto deberia ser configurable
             lamda = 1 / 3  # va al baño 1 vez cada 4 horas promedio
@@ -116,6 +118,9 @@ class Modelo(Heuristica):
                 tiempo_viaje_bano = distancia_idea_y_vuelta_bano / op.velocidad.metros_por_minuto + tiempo_en_bano
                 viaje.tiempo_muerto = tiempo_viaje_bano
                 viaje.tiempo = tiempo_viaje_bano + viaje.tiempo
+                tiempo_extra = tiempo_extra + tiempo_viaje_bano
+
+        return tiempo_extra
 
     def _desempaquetar_pedidos(self, pedidos: list[Pedido]) -> list[tuple[Producto, int]]:
         """Desempaqueta todos los pedidos en una lista de (producto, cantidad)."""
